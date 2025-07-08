@@ -1,7 +1,7 @@
 {
 	"name": "obsidian-eagle-plugin",
 	"version": "1.0.0",
-	"description": "Eagle plugin for Obsidian",
+	"description": "Obsidian Eagle Plugin - Upload images to Eagle app directly from Obsidian",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
@@ -9,8 +9,15 @@
 		"build": "tsc -noEmit -skipLibCheck && node scripts/esbuild.build.js production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
-	"keywords": [],
-	"author": "",
+	"keywords": [
+		"obsidian",
+		"plugin",
+		"eagle",
+		"image",
+		"upload",
+		"management"
+	],
+	"author": "beomsu koh",
 	"license": "MIT",
 	"devDependencies": {
 		"@types/node": "^16.11.6",

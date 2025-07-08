@@ -1,0 +1,11 @@
+{
+	"id": "eagle-plugin",
+	"name": "Eagle Image Upload Plugin",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Upload images to Eagle app directly from Obsidian via drag-drop, paste, and canvas operations.",
+	"author": "Eagle Plugin Developer",
+	"authorUrl": "",
+	"fundingUrl": "",
+	"isDesktopOnly": true
+}

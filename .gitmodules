@@ -1,0 +1,4 @@
+[submodule ".cursor"]
+	path = .cursor
+	url = https://github.com/GoBeromsu/cursor-rules.git
+	branch = main

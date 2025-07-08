@@ -1,0 +1,6 @@
+/* Eagle Plugin Styles */
+
+/* Ribbon icon styling */
+.eagle-plugin-ribbon-class {
+	color: var(--interactive-accent);
+}

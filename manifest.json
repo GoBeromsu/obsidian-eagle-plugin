@@ -5,7 +5,7 @@
 	"minAppVersion": "0.15.0",
 	"description": "Upload images to Eagle app directly from Obsidian via drag-drop, paste, and canvas operations.",
 	"author": "beomsu koh",
-	"authorUrl": "https://github.com/GoBeromsu",
-	"fundingUrl": "",
-	"isDesktopOnly": true
+	"authorUrl": "https://medium.com/@beromkoh",
+	"fundingUrl": "buymeacoffee.com/gobeumsu9",
+	"isDesktopOnly": false
 }

@@ -19,13 +19,16 @@ export default class UploadConfirmationModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl('h2', { text: 'Upload to Eagle' });
-		contentEl.createEl('p', { text: 'Do you want to upload this image to Eagle?' });
+		contentEl.createEl('h2', { text: 'Upload to Eagle?' });
 
+		// Yes/No buttons with icons
 		new Setting(contentEl)
+			.setName('Upload Image')
+			.setDesc('Upload the image to Eagle and insert the link')
 			.addButton((button) => {
 				button
-					.setButtonText('Upload')
+					.setIcon('check')
+					.setTooltip('Upload to Eagle')
 					.setCta()
 					.onClick(() => {
 						this.response.shouldUpload = true;
@@ -33,15 +36,19 @@ export default class UploadConfirmationModal extends Modal {
 					});
 			})
 			.addButton((button) => {
-				button.setButtonText('Cancel').onClick(() => {
-					this.response.shouldUpload = false;
-					this.close();
-				});
+				button
+					.setIcon('x')
+					.setTooltip('Cancel')
+					.onClick(() => {
+						this.response.shouldUpload = false;
+						this.close();
+					});
 			});
 
+		// Simple don't ask again option
 		new Setting(contentEl)
 			.setName('Always upload without asking')
-			.setDesc('Skip this confirmation dialog in the future')
+			.setDesc('Skip this confirmation dialog and automatically upload images in the future')
 			.addToggle((toggle) => {
 				toggle.onChange((value) => {
 					this.response.alwaysUpload = value;

@@ -7,7 +7,7 @@
 	"scripts": {
 		"dev": "node scripts/dev.js",
 		"build": "tsc -noEmit -skipLibCheck && node scripts/esbuild.build.js production",
-		"version": "node version-bump.mjs && git add manifest.json versions.json"
+		"version": "1.0.0"
 	},
 	"keywords": [
 		"obsidian",

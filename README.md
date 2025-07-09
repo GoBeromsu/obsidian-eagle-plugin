@@ -28,7 +28,7 @@ An Obsidian plugin that integrates with the [Eagle App](https://eagle.cool) to u
 ### BRAT Installation
 
 1. Install the [BRAT plugin](obsidian://show-plugin?id=obsidian42-brat)
-2. Add this repository: `your-username/obsidian-eagle-plugin`
+2. Copy the this repository url
 3. Enable the plugin in Community Plugins
 
 ## Configuration

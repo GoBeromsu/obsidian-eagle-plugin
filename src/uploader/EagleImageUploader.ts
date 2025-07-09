@@ -1,7 +1,6 @@
-import { App, TFile } from 'obsidian';
+import { App } from 'obsidian';
 import EagleClient from '../eagle/EagleClient';
-import { EagleAddItemRequest } from '../types/eagle';
-import ImageUploader from '../types/eagle';
+import ImageUploader, { EagleAddItemRequest } from '../types/eagle';
 
 export default class EagleImageUploader implements ImageUploader {
 	// Initialize uploader with required dependencies and settings

@@ -1,5 +1,5 @@
 import { requestUrl } from 'obsidian';
-import { EagleApiResponse, EagleAddItemRequest, EagleAddItemResponse } from '../types/eagle';
+import { EagleAddItemRequest, EagleAddItemResponse, EagleApiResponse } from '../types/eagle';
 
 export class EagleApiError extends Error {
 	// Create custom error type for Eagle API failures

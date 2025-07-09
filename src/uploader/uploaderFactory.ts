@@ -1,8 +1,8 @@
 import { App } from 'obsidian';
 import EagleClient from '../eagle/EagleClient';
+import ImageUploader from '../types/eagle';
 import { EaglePluginSettings } from '../types/plugin';
 import EagleImageUploader from './EagleImageUploader';
-import ImageUploader from '../types/eagle';
 
 // Create image uploader instance based on plugin settings
 export default function buildUploaderFrom(

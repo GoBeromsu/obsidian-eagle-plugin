@@ -17,9 +17,6 @@ export default class EagleSettingsTab extends PluginSettingTab {
 		// Connection Test - 최상단에 위치
 		this.addConnectionTest();
 
-		// Eagle API URL
-		this.addEagleApiUrlSetting();
-
 		// Vault Path Setting
 		this.addVaultPathSetting();
 
@@ -56,22 +53,6 @@ export default class EagleSettingsTab extends PluginSettingTab {
 			});
 	}
 
-	// Add Eagle API URL configuration setting
-	private addEagleApiUrlSetting(): void {
-		new Setting(this.containerEl)
-			.setName('Eagle API URL')
-			.setDesc('Eagle app API URL including port (default: http://localhost:41595)')
-			.addText((text) => {
-				text
-					.setPlaceholder('http://localhost:41595')
-					.setValue(this.plugin.settings.eagleApiUrl)
-					.onChange(async (value) => {
-						this.plugin.settings.eagleApiUrl = value;
-						await this.plugin.saveSettings();
-					});
-			});
-	}
-
 	// Add vault path configuration setting
 	private addVaultPathSetting(): void {
 		new Setting(this.containerEl)
@@ -91,16 +72,6 @@ export default class EagleSettingsTab extends PluginSettingTab {
 	// Add upload behavior configuration settings
 	private addUploadSettings(): void {
 		new Setting(this.containerEl)
-			.setName('Enable image upload')
-			.setDesc('Automatically upload images to Eagle when detected')
-			.addToggle((toggle) => {
-				toggle.setValue(this.plugin.settings.enableUpload).onChange(async (value) => {
-					this.plugin.settings.enableUpload = value;
-					await this.plugin.saveSettings();
-				});
-			});
-
-		new Setting(this.containerEl)
 			.setName('Show upload confirmation')
 			.setDesc('Show confirmation dialog before uploading images')
 			.addToggle((toggle) => {
@@ -110,17 +81,17 @@ export default class EagleSettingsTab extends PluginSettingTab {
 				});
 			});
 
-		new Setting(this.containerEl)
-			.setName('Default folder ID')
-			.setDesc('Eagle folder ID to upload images to (leave empty for root folder)')
-			.addText((text) => {
-				text
-					.setPlaceholder('Enter folder ID (optional)')
-					.setValue(this.plugin.settings.defaultFolderId)
-					.onChange(async (value) => {
-						this.plugin.settings.defaultFolderId = value;
-						await this.plugin.saveSettings();
-					});
-			});
+		// new Setting(this.containerEl)
+		// 	.setName('Default folder ID')
+		// 	.setDesc('Eagle folder ID to upload images to (leave empty for root folder)')
+		// 	.addText((text) => {
+		// 		text
+		// 			.setPlaceholder('Enter folder ID (optional)')
+		// 			.setValue(this.plugin.settings.defaultFolderId)
+		// 			.onChange(async (value) => {
+		// 				this.plugin.settings.defaultFolderId = value;
+		// 				await this.plugin.saveSettings();
+		// 			});
+		// 	});
 	}
 }

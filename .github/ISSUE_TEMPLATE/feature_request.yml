@@ -1,0 +1,32 @@
+name: Feature Request
+description: Propose a feature request to help improve this plugin
+title: '[Feature]: '
+labels: ['feature request']
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What’s the problem that this feature aims to solve?
+      placeholder: I find it frustrating when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe your idea clearly
+      placeholder: |
+        - How it should behave
+        - What options or UI it might need
+        - Interaction pattern
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any screenshots, mockups, or related plugins?
+      placeholder: Optional but helpful

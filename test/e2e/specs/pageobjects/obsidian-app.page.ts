@@ -4,7 +4,7 @@ import * as path from 'node:path'
 import { App, EditorPosition } from 'obsidian'
 import { Key } from 'webdriverio'
 
-import { IMGUR_PLUGIN_ID, TEST_VAULT_DIR } from '../../constants'
+import { EAGLE_PLUGIN_ID, TEST_VAULT_DIR } from '../../constants'
 import CanvasCard from './canvas-card.page'
 import ObsidianSettings from './obsidian-settings.page'
 
@@ -26,7 +26,7 @@ class ObsidianApp {
       ipcRenderer.sendSync('vault-open', testVaultDir, shouldCreateNewVault)
     }, TEST_VAULT_DIR)
 
-    const targetPluginsDir = `${TEST_VAULT_DIR}/.obsidian/plugins/${IMGUR_PLUGIN_ID}/`
+    const targetPluginsDir = `${TEST_VAULT_DIR}/.obsidian/plugins/${EAGLE_PLUGIN_ID}/`
     await fs.mkdir(targetPluginsDir, { recursive: true })
     await fs.copyFile('manifest.json', `${targetPluginsDir}/manifest.json`)
     await fs.copyFile('main.js', `${targetPluginsDir}/main.js`)
@@ -40,16 +40,16 @@ class ObsidianApp {
     await browser.switchWindow('app://obsidian.md/index.html')
   }
 
-  async activateImgurPlugin() {
-    await this.activatePlugin(IMGUR_PLUGIN_ID)
+  async activateEaglePlugin() {
+    await this.activatePlugin(EAGLE_PLUGIN_ID)
   }
 
   private async activatePlugin(pluginId: string) {
-    await browser.execute((imgurPluginId: string) => {
+    await browser.execute((eaglePluginId: string) => {
       // @ts-expect-error 'app' exists in Obsidian
       declare const app: App
       app.plugins.setEnable(true)
-      app.plugins.enablePlugin(imgurPluginId)
+      app.plugins.enablePlugin(eaglePluginId)
     }, pluginId)
   }
 
@@ -106,9 +106,9 @@ class ObsidianApp {
     await this.hitEnter()
   }
 
-  async uploadToImgurUsingCommandPalette() {
+  async uploadToEagleUsingCommandPalette() {
     await this.openCommandPalette()
-    await browser.keys('Upload to Imgur')
+    await browser.keys('Upload to Eagle')
     await this.hitEnter()
   }
 

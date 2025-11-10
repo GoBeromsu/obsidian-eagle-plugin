@@ -4,7 +4,7 @@ export default class ImageUploadBlockingModal extends Modal {
   isOpen: boolean
 
   override onOpen(): void {
-    this.titleEl.setText('Imgur plugin')
+    this.titleEl.setText('Eagle plugin')
     this.contentEl.setText('Uploading image...')
 
     const buttonsDiv = this.modalEl.createDiv('modal-button-container')

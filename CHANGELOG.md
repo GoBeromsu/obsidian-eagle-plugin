@@ -1,17 +1,26 @@
-# obsidian-imgur-plugin changelog
+# obsidian-eagle-plugin changelog
 
-## [2.0.0] - 2021-07-10
+## [2.0.0] - 2025-11-10
 
-This release brings images upload on behalf of authenticated user.
+This release brings Eagle integration for local image management.
 
-Now you have a choice:
+### Changed
 
-- either to upload "anonymously" with `client_id`
-- or to sign in with your Imgur account and have your images uploaded to your account
+- Migrated from Imgur to Eagle for image storage
+- All images are now stored locally in your Eagle library
+- Simplified settings to only require Eagle API host and port configuration
 
 ### Added
 
-- User-friendly OAuth authentication (#5)
+- Eagle API integration
+- Local image library management through Eagle
+- Support for Eagle's organizational features
+
+### Removed
+
+- Imgur authentication and anonymous upload features
+- Client ID configuration (no longer needed)
+- Remote image hosting dependencies
 
 ## [1.2.0] - 2021-06-02
 
@@ -36,7 +45,7 @@ Now you have a choice:
 - Works by providing `client_id` manually
 - Only supports paste action
 
-[2.0.0]: https://github.com/gavvvr/obsidian-imgur-plugin/releases/tag/2.0.0
+[2.0.0]: https://github.com/gavvvr/obsidian-eagle-plugin/releases/tag/2.0.0
 [1.2.0]: https://github.com/gavvvr/obsidian-imgur-plugin/releases/tag/1.2.0
 [1.1.0]: https://github.com/gavvvr/obsidian-imgur-plugin/releases/tag/1.1.0
 [1.0.0]: https://github.com/gavvvr/obsidian-imgur-plugin/releases/tag/1.0.0

@@ -1,12 +1,12 @@
-import ImgurPlugin from '../../../src/ImgurPlugin'
-import { IMGUR_PLUGIN_ID } from '../constants'
+import EaglePlugin from '../../../src/EaglePlugin'
+import { EAGLE_PLUGIN_ID } from '../constants'
 
 declare module 'obsidian' {
   interface App {
     plugins: {
       plugins: {
         [index: string]: Plugin
-        [IMGUR_PLUGIN_ID]: ImgurPlugin
+        [EAGLE_PLUGIN_ID]: EaglePlugin
       }
       setEnable(toggle: boolean): void
       enablePlugin(pluginId: string): void

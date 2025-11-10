@@ -7,6 +7,8 @@ import { generatePseudoRandomId } from '../utils/pseudo-random'
 const EAGLE_API_ENDPOINTS = {
   ADD_FROM_PATH: '/api/item/addFromPath',
   THUMBNAIL: '/api/item/thumbnail',
+  FOLDER_LIST: '/api/folder/list',
+  FOLDER_CREATE: '/api/folder/create',
 } as const
 
 const EAGLE_PROCESSING_DELAY_MS = 300
@@ -14,9 +16,15 @@ const FILE_URL_PROTOCOL = 'file://'
 const EAGLE_URL_PROTOCOL = 'eagle://item/'
 const THUMBNAIL_SUFFIX_PATTERN = /_thumbnail(\.[^.]+)$/
 
+interface EagleFolder {
+  id: string
+  name: string
+}
+
 export default class EagleUploader {
   private readonly app: App
   private readonly settings: EaglePluginSettings
+  private folderIdCache: Map<string, string> = new Map()
 
   constructor(app: App, settings: EaglePluginSettings) {
     this.app = app
@@ -25,7 +33,13 @@ export default class EagleUploader {
 
   async upload(image: File): Promise<string> {
     const tempFilePath = await this.saveToTempFile(image)
-    const itemId = await this.addToEagle(tempFilePath)
+
+    let folderId: string | undefined
+    if (this.settings.eagleFolderName) {
+      folderId = await this.ensureFolderExists(this.settings.eagleFolderName)
+    }
+
+    const itemId = await this.addToEagle(tempFilePath, folderId)
     await new Promise((resolve) => setTimeout(resolve, EAGLE_PROCESSING_DELAY_MS))
     const imagePath = await this.getImagePath(itemId)
     return imagePath
@@ -47,19 +61,25 @@ export default class EagleUploader {
     })
   }
 
-  private async addToEagle(filePath: string): Promise<string> {
+  private async addToEagle(filePath: string, folderId: string | undefined): Promise<string> {
     const { eagleHost, eaglePort } = this.settings
     const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.ADD_FROM_PATH}`
+
+    const body: Record<string, string> = {
+      path: filePath,
+      name: filePath.split('/').pop() || 'image',
+      annotation: 'Added via Obsidian Eagle Plugin',
+    }
+
+    if (folderId) {
+      body.folderId = folderId
+    }
 
     const resp = await requestUrl({
       url: url,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        path: filePath,
-        name: filePath.split('/').pop(),
-        annotation: 'Added via Obsidian Eagle Plugin',
-      }),
+      body: JSON.stringify(body),
       throw: false,
     })
 
@@ -92,5 +112,66 @@ export default class EagleUploader {
     }
 
     return `${EAGLE_URL_PROTOCOL}${itemId}`
+  }
+
+  async listFolders(): Promise<EagleFolder[]> {
+    const { eagleHost, eaglePort } = this.settings
+    const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.FOLDER_LIST}`
+
+    const resp = await requestUrl({
+      url: url,
+      method: 'GET',
+      throw: false,
+    })
+
+    const data = resp.json
+
+    if (data?.status === 'success' && data?.data) {
+      return data.data.map((folder: { id: string; name: string }) => ({
+        id: folder.id,
+        name: folder.name,
+      }))
+    }
+
+    throw new EagleApiError('Failed to list folders')
+  }
+
+  async createFolder(name: string): Promise<string> {
+    const { eagleHost, eaglePort } = this.settings
+    const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.FOLDER_CREATE}`
+
+    const resp = await requestUrl({
+      url: url,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folderName: name }),
+      throw: false,
+    })
+
+    const data = resp.json
+
+    if (data?.status === 'success' && data?.data?.id) {
+      return data.data.id
+    }
+
+    throw new EagleApiError('Failed to create folder')
+  }
+
+  async ensureFolderExists(name: string): Promise<string> {
+    if (this.folderIdCache.has(name)) {
+      return this.folderIdCache.get(name)!
+    }
+
+    const folders = await this.listFolders()
+    const existing = folders.find((f) => f.name === name)
+
+    if (existing) {
+      this.folderIdCache.set(name, existing.id)
+      return existing.id
+    }
+
+    const newId = await this.createFolder(name)
+    this.folderIdCache.set(name, newId)
+    return newId
   }
 }

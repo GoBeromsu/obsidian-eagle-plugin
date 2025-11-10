@@ -39,6 +39,20 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
             this.plugin.settings.eaglePort = value ? Number.parseInt(value) : 41595
           }),
       )
+
+    new Setting(containerEl)
+      .setName('Eagle Folder Name')
+      .setDesc(
+        'The folder name in Eagle where images will be saved. Leave empty to save to the default folder.',
+      )
+      .addText((text) =>
+        text
+          .setPlaceholder('Obsidian')
+          .setValue(this.plugin.settings.eagleFolderName)
+          .onChange((value) => {
+            this.plugin.settings.eagleFolderName = value
+          }),
+      )
   }
 
   override hide() {

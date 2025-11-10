@@ -41,6 +41,7 @@ Go to plugin settings and configure:
 
 - **Eagle API Host**: The host for your running Eagle instance (default: `localhost`)
 - **Eagle API Port**: The port for your running Eagle instance (default: `41595`)
+- **Eagle Folder Name**: (Optional) The folder name in Eagle where images will be saved. Leave empty to save to the default folder.
 
 That's all! Now you are ready to make notes and upload all your images to Eagle.
 
@@ -57,7 +58,7 @@ That's all! Now you are ready to make notes and upload all your images to Eagle.
 
 ### Discussion
 
-If you have any questions/suggestions, consider using [GitHub Discussions](https://github.com/gavvvr/obsidian-eagle-plugin/discussions).
+If you have any questions/suggestions, consider using [GitHub Discussions](https://github.com/GoBeromsu/obsidian-eagle-plugin/discussions).
 
 ### Known limitations
 
@@ -73,6 +74,7 @@ Check out the [DEVELOPMENT.md](DEVELOPMENT.md) to get started with the code.
 ### Your support
 
 If this plugin is helpful to you, you can show your ❤️ by giving it a star ⭐️ on GitHub.
-You can also buy me a coffee using Ko-fi:
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/F2F44TOP7)
+### Credits
+
+Originally forked from [gavvvr/obsidian-imgur-plugin](https://github.com/gavvvr/obsidian-imgur-plugin) and adapted for Eagle integration.

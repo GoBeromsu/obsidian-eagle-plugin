@@ -4,8 +4,8 @@
   "version": "2.0.0",
   "minAppVersion": "0.15.0",
   "description": "Upload images to Eagle and integrate with Obsidian notes.",
-  "author": "gavvvr",
-  "authorUrl": "https://github.com/gavvvr/obsidian-eagle-plugin",
-  "fundingUrl": "https://buymeacoffee.com/gavvvr",
+  "author": "Beomsu Koh",
+  "authorUrl": "https://github.com/GoBeromsu/obsidian-eagle-plugin",
+
   "isDesktopOnly": false
 }

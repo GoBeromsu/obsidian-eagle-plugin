@@ -16,6 +16,7 @@ export const sharedEsbuildConfig = {
   external: [
     'obsidian',
     'electron',
+    'os',
     '@codemirror/autocomplete',
     '@codemirror/collab',
     '@codemirror/commands',

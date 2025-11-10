@@ -1,23 +1,21 @@
 import ObsidianApp from './obsidian-app.page'
 
 class ObsidianSettings {
-  async switchToImgurSettingsTab() {
-    await $('.vertical-tab-nav-item=Imgur').click()
+  async switchToEagleSettingsTab() {
+    await $('.vertical-tab-nav-item=Eagle').click()
   }
 
-  async configureClientId(clientId: string) {
-    const clientIdInput = await this.findClientIdInput()
-    await clientIdInput.setValue(clientId)
+  async configureEagleHost(host: string) {
+    const hostInput = await this.findEagleHostInput()
+    await hostInput.setValue(host)
   }
 
-  private async findClientIdInput() {
-    const clientSettingItem = await $$('div.setting-item').find<WebdriverIO.Element>(
-      async (item) => {
-        const label = await item.$('.setting-item-info .setting-item-name').getText()
-        return label === 'Client ID'
-      },
-    )
-    return clientSettingItem.$('.setting-item-control input[type="text"]')
+  private async findEagleHostInput() {
+    const hostSettingItem = await $$('div.setting-item').find<WebdriverIO.Element>(async (item) => {
+      const label = await item.$('.setting-item-info .setting-item-name').getText()
+      return label === 'Eagle API Host'
+    })
+    return hostSettingItem.$('.setting-item-control input[type="text"]')
   }
 
   async closeSettings() {

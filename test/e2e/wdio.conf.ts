@@ -51,6 +51,6 @@ export const config: WebdriverIO.Config = {
   beforeSuite: async () => {
     await ObsidianApp.removeE2eTestVaultIfExists()
     await ObsidianApp.createAndOpenFreshVault()
-    await ObsidianApp.activateImgurPlugin()
+    await ObsidianApp.activateEaglePlugin()
   },
 }

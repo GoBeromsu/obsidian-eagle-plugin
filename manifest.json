@@ -1,10 +1,11 @@
 {
-  "id": "obsidian-imgur-plugin",
-  "name": "Imgur",
-  "version": "2.6.3",
-  "minAppVersion": "0.13.19",
-  "description": "This plugin uploads images from your clipboard to imgur.com and embeds uploaded image to your note",
-  "author": "Kirill Gavrilov",
-  "authorUrl": "https://github.com/gavvvr",
+  "id": "obsidian-eagle-plugin",
+  "name": "Eagle Integration",
+  "version": "2.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Upload images to Eagle and integrate with Obsidian notes.",
+  "author": "gavvvr",
+  "authorUrl": "https://github.com/gavvvr/obsidian-eagle-plugin",
+  "fundingUrl": "https://buymeacoffee.com/gavvvr",
   "isDesktopOnly": false
 }

@@ -1,54 +1,53 @@
 # CLAUDE.md
-
+Eagle Plugin for Obsidian — uploads images to Eagle instead of storing them locally in the vault.
 This file provides guidance for Claude Code when working with this repository.
 
-## Project Overview
+## Rules
 
-Eagle Plugin for Obsidian - uploads images to [Eagle](https://eagle.cool/) instead of storing them locally in your vault.
+1. Ensure the current branch is `main`.
+2. Create a new branch from `main` for this task.
+	- Use `feature/<name>`, `fix/<name>`, or `refactor/<name>`.
+3. Do not make any commits on `main`.
 
 ## Branch Strategy
 
-- **Main branch**: `main` - production-ready code
-- **Feature branches**: `feature/<feature-name>` - new features
-- **Bugfix branches**: `fix/<bug-name>` - bug fixes
-- **Refactor branches**: `refactor/<description>` - code refactoring
+- `main`
+	- Always production-ready
+	- Protected branch (no direct commits)
 
-Always create a feature branch from `main` and submit a PR for review.
+- `feature/<name>`
+	- New user-facing functionality
+	- Created from `main`
+	- Merged via PR only
+
+- `fix/<name>`
+	- Bug fixes with minimal scope
+	- Created from `main`
+
+- `refactor/<name>`
+	- Internal code improvements without behaviour changes
+	- No feature mixing
 
 ## Commit Format
-
-This project follows [Conventional Commits](https://www.conventionalcommits.org/).
-
-### Format
-
+This project follows Conventional Commits.
 ```
 <type>(<scope>): <description>
-
-[optional body]
-
-[optional footer(s)]
 ```
 
-### Types
+### Allowed Types
 
-- `feat`: A new feature
-- `fix`: A bug fix
-- `docs`: Documentation only changes
-- `style`: Changes that do not affect the meaning of the code (formatting, etc.)
-- `refactor`: A code change that neither fixes a bug nor adds a feature
-- `perf`: A code change that improves performance
-- `test`: Adding missing tests or correcting existing tests
-- `build`: Changes that affect the build system or external dependencies
-- `ci`: Changes to CI configuration files and scripts
-- `chore`: Other changes that don't modify src or test files
+- `feat` | `fix` | `docs` | `refactor` | `perf`
+- `test` | `build` | `ci` | `chore`
 
 ### Examples
 
 ```
-feat(uploader): add support for batch image uploads
-fix(api): handle Eagle connection timeout gracefully
-docs(readme): update installation instructions
-refactor(settings): simplify configuration logic
+
+feat(uploader): support batch image uploads
+fix(api): handle Eagle timeout
+refactor(settings): simplify config flow
+
 ```
 
-Commitlint is configured via `.commitlintrc.yaml` with `@commitlint/config-conventional`.
+Commitlint is enforced via `.commitlintrc.yaml`.
+```

@@ -1,53 +1,39 @@
 # CLAUDE.md
+
 Eagle Plugin for Obsidian — uploads images to Eagle instead of storing them locally in the vault.
 This file provides guidance for Claude Code when working with this repository.
 
 ## Rules
 
-1. Ensure the current branch is `main`.
-2. Create a new branch from `main` for this task.
-	- Use `feature/<name>`, `fix/<name>`, or `refactor/<name>`.
-3. Do not make any commits on `main`.
+1. Before starting work, Create a new branch from `main` for this task.
 
-## Branch Strategy
+## Practical Feature-Branch Strategy (Industry Standard)
 
-- `main`
-	- Always production-ready
-	- Protected branch (no direct commits)
+This repository follows a **GitHub-style feature branch workflow**: each task is developed in its own branch and integrated into `main` via PR after review.
 
-- `feature/<name>`
-	- New user-facing functionality
-	- Created from `main`
-	- Merged via PR only
+- `main` — always production-ready; no direct commits
+- `feature/<name>` — new functionality; branched from `main`
+- `fix/<name>` — bug fix; branched from `main`
+- `refactor/<name>` — internal improvements; branched from `main`
 
-- `fix/<name>`
-	- Bug fixes with minimal scope
-	- Created from `main`
+**Workflow Principles**
 
-- `refactor/<name>`
-	- Internal code improvements without behaviour changes
-	- No feature mixing
+- Always create a branch from `main` for each change
+- Branch names describe _purpose_, not implementation details
+- Use PRs for merging into `main` only
+- Keep branches short-lived and focused on one concern
 
-## Commit Format
-This project follows Conventional Commits.
+## Commit Convention
+
+This project follows **Conventional Commits**.
+
 ```
 <type>(<scope>): <description>
 ```
 
-### Allowed Types
+Allowed types:
 
 - `feat` | `fix` | `docs` | `refactor` | `perf`
 - `test` | `build` | `ci` | `chore`
 
-### Examples
-
-```
-
-feat(uploader): support batch image uploads
-fix(api): handle Eagle timeout
-refactor(settings): simplify config flow
-
-```
-
 Commitlint is enforced via `.commitlintrc.yaml`.
-```

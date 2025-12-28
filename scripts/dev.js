@@ -4,7 +4,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { exit } from 'node:process'
 
-import enquirer from 'enquirer'
+import { select } from '@inquirer/prompts'
 import esbuild from 'esbuild'
 import obsidianUtils from 'obsidian-utils'
 
@@ -20,15 +20,33 @@ try {
   exit(1)
 }
 
-const vaultsOptions = vaults.map((v) => ({ message: v.name, name: v.path }))
+const vaultsOptions = vaults.map((v) => ({ name: v.name, value: v.path }))
 
-/** @type {{ selectedVaultPath: string }} */
-const { selectedVaultPath } = await enquirer.prompt({
-  type: 'select',
-  name: 'selectedVaultPath',
-  message: 'Select Obsidian Vault for development',
-  choices: vaultsOptions,
-})
+// Support VAULT_PATH env var or --vault CLI arg for non-interactive environments
+const envVaultPath = process.env.VAULT_PATH
+const cliVaultArg = process.argv[2]
+
+let selectedVaultPath
+if (envVaultPath) {
+  selectedVaultPath = envVaultPath
+  console.log(`Using vault from VAULT_PATH: ${selectedVaultPath}`)
+} else if (cliVaultArg) {
+  // Match by name or path
+  const match = vaults.find((v) => v.name === cliVaultArg || v.path === cliVaultArg)
+  if (match) {
+    selectedVaultPath = match.path
+    console.log(`Using vault: ${match.name}`)
+  } else {
+    console.error(`Vault not found: ${cliVaultArg}`)
+    console.error('Available vaults:', vaults.map((v) => v.name).join(', '))
+    exit(1)
+  }
+} else {
+  selectedVaultPath = await select({
+    message: 'Select Obsidian Vault for development',
+    choices: vaultsOptions,
+  })
+}
 
 if (!(await isPluginInstalled('hot-reload', selectedVaultPath))) {
   console.log('Installing hot-reload from github...')

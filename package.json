@@ -1,6 +1,7 @@
 {
   "name": "obsidian-eagle-plugin",
   "version": "2.0.0",
+  "type": "module",
   "description": "Upload images to Eagle and integrate with Obsidian notes.",
   "main": "main.js",
   "scripts": {
@@ -21,6 +22,7 @@
   "author": "gavvvr",
   "license": "MIT",
   "devDependencies": {
+    "@inquirer/prompts": "^8.1.0",
     "@types/node": "^16.11.6",
     "@typescript-eslint/eslint-plugin": "5.29.0",
     "@typescript-eslint/parser": "5.29.0",
@@ -31,7 +33,6 @@
     "@wdio/spec-reporter": "^8.26.2",
     "builtin-modules": "3.3.0",
     "chromedriver": "^119.0.1",
-    "enquirer": "^2.4.1",
     "esbuild": "0.17.3",
     "eslint": "^8.47.0",
     "eslint-config-prettier": "^9.0.0",

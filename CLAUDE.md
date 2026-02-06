@@ -3,37 +3,48 @@
 Eagle Plugin for Obsidian — uploads images to Eagle instead of storing them locally in the vault.
 This file provides guidance for Claude Code when working with this repository.
 
-## Rules
+> Git strategy, branch naming, commit convention, and release management are defined in the **root CLAUDE.md**. This file covers plugin-specific details only.
 
-1. Before starting work, Create a new branch from `main` for this task.
+## Project Overview
 
-## Practical Feature-Branch Strategy (Industry Standard)
+- Obsidian plugin: uploads images to Eagle app instead of local vault storage
+- Entry point: `src/EaglePlugin.ts`
+- Build output: `main.js` (CommonJS, ES2018 target)
 
-This repository follows a **GitHub-style feature branch workflow**: each task is developed in its own branch and integrated into `main` via PR after review.
+## Build & Dev Commands
 
-- `main` — always production-ready; no direct commits
-- `feature/<name>` — new functionality; branched from `main`
-- `fix/<name>` — bug fix; branched from `main`
-- `refactor/<name>` — internal improvements; branched from `main`
-
-**Workflow Principles**
-
-- Always create a branch from `main` for each change
-- Branch names describe _purpose_, not implementation details
-- Use PRs for merging into `main` only
-- Keep branches short-lived and focused on one concern
-
-## Commit Convention
-
-This project follows **Conventional Commits**.
-
-```
-<type>(<scope>): <description>
+```bash
+npm run dev       # esbuild watch + vault hot reload
+npm run build     # production build → main.js
+npm run test      # Vitest unit tests
+npm run test:ui   # Vitest UI
+npm run e2e       # WebdriverIO + Electron E2E
+npm run lint      # ESLint (flat config)
+npm run lint:fix  # ESLint auto-fix
 ```
 
-Allowed types:
+## Architecture
 
-- `feat` | `fix` | `docs` | `refactor` | `perf`
-- `test` | `build` | `ci` | `chore`
+- `src/EaglePlugin.ts` — Main plugin class
+- `src/uploader/` — Eagle API communication
+- `src/ui/` — Settings tab, modals
+- `src/utils/` — Editor, vault, file utilities
+- `scripts/dev.js` — Hot reload dev server (obsidian-utils based)
 
-Commitlint is enforced via `.commitlintrc.yaml`.
+## Hot Reload Dev Workflow
+
+- `scripts/dev.js`: select vault → auto-install hot-reload plugin → esbuild watch → auto-reload on change
+- Set `VAULT_PATH` env or pass CLI arg to specify vault (for CI/non-interactive environments)
+- CDP integration: run `verify-plugin.mjs` after build for automated verification
+
+## Testing
+
+- Unit: `test/*.test.ts` (Vitest)
+- E2E: `test/e2e/` (WebdriverIO + Electron, PageObject pattern)
+- Coverage: v8 provider
+
+## Tooling
+
+- ESLint flat config + TypeScript type checking + import sorting
+- Prettier (no semicolons, single quotes, trailing commas)
+- Husky pre-commit (lint) + commit-msg (commitlint via `.commitlintrc.yaml`)

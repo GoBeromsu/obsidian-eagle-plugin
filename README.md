@@ -45,6 +45,25 @@ Go to plugin settings and configure:
 
 That's all! Now you are ready to make notes and upload all your images to Eagle.
 
+## Portability (library / machine moves)
+
+This plugin embeds images as `file://` URLs so they render immediately in Obsidian. These links are **absolute paths**, so they can break if:
+
+- Your Eagle library moves to a different folder/drive
+- You switch machines (different home directory)
+- You migrate across operating systems
+
+To keep links repairable, the plugin stores the Eagle item ID in the markdown alt text:
+
+```markdown
+![eagle:<itemId>](file:///absolute/path/to/image.jpg)
+```
+
+If embedded images stop rendering after a move, run one of these commands:
+
+- `Eagle: Update embedded image paths (current note)`
+- `Eagle: Update embedded image paths (entire vault)`
+
 ## FAQ
 
 **Q:** How secure is this approach?  

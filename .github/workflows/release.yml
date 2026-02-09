@@ -6,26 +6,28 @@ on:
       - '*'
 
 env:
-  PLUGIN_NAME: imgur
+  PLUGIN_NAME: obsidian-eagle-plugin
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      HUSKY: 0
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
       - name: Install pnpm
         uses: pnpm/action-setup@v4
       - name: Environment details
-        run: npm version
+        run: pnpm version
       - name: Build
         id: build
         run: |
-          npm install
-          npm run build
+          pnpm install --frozen-lockfile
+          pnpm run build
           mkdir ${{ env.PLUGIN_NAME }}
           cp main.js manifest.json ${{ env.PLUGIN_NAME }}
           zip -r ${{ env.PLUGIN_NAME }}.zip ${{ env.PLUGIN_NAME }}

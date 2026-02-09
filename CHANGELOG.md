@@ -1,5 +1,16 @@
 # obsidian-eagle-plugin changelog
 
+## [2.0.1] - 2026-02-09
+
+### Fixed
+
+- Percent-encode `file://` URLs (spaces/unicode/parentheses) so Obsidian renders embeds reliably.
+
+### Added
+
+- Store Eagle item IDs in markdown alt text (`![eagle:<id>](file://...)`) for portability.
+- Commands to re-resolve embedded image paths for the current note or the entire vault.
+
 ## [2.0.0] - 2025-11-10
 
 This release brings Eagle integration for local image management.
@@ -46,6 +57,7 @@ This release brings Eagle integration for local image management.
 - Only supports paste action
 
 [2.0.0]: https://github.com/gavvvr/obsidian-eagle-plugin/releases/tag/2.0.0
+[2.0.1]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/2.0.1
 [1.2.0]: https://github.com/gavvvr/obsidian-imgur-plugin/releases/tag/1.2.0
 [1.1.0]: https://github.com/gavvvr/obsidian-imgur-plugin/releases/tag/1.1.0
 [1.0.0]: https://github.com/gavvvr/obsidian-imgur-plugin/releases/tag/1.0.0

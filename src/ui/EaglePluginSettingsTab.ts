@@ -1,4 +1,5 @@
 import { App, PluginSettingTab, Setting } from 'obsidian'
+
 import EaglePlugin from '../EaglePlugin'
 
 export default class EaglePluginSettingsTab extends PluginSettingTab {

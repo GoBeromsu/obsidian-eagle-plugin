@@ -14,13 +14,15 @@ This file provides guidance for Claude Code when working with this repository.
 ## Build & Dev Commands
 
 ```bash
-npm run dev       # esbuild watch + vault hot reload
-npm run build     # production build → main.js
-npm run test      # Vitest unit tests
-npm run test:ui   # Vitest UI
-npm run e2e       # WebdriverIO + Electron E2E
-npm run lint      # ESLint (flat config)
-npm run lint:fix  # ESLint auto-fix
+pnpm run dev       # vault selection + esbuild watch + hot reload
+pnpm run dev:build # esbuild watch only (no vault)
+pnpm run build     # production build → main.js (single-shot)
+pnpm run test      # Vitest unit tests
+pnpm run test:ui   # Vitest UI
+pnpm run e2e       # WebdriverIO + Electron E2E
+pnpm run lint      # ESLint (flat config)
+pnpm run lint:fix  # ESLint auto-fix
+pnpm run ci        # build + lint + test
 ```
 
 ## Architecture
@@ -29,12 +31,14 @@ npm run lint:fix  # ESLint auto-fix
 - `src/uploader/` — Eagle API communication
 - `src/ui/` — Settings tab, modals
 - `src/utils/` — Editor, vault, file utilities
-- `scripts/dev.js` — Hot reload dev server (obsidian-utils based)
+- `scripts/dev.mjs` — Unified dev orchestrator (vault discovery + watch + sync)
+- `scripts/dev.config.mjs` — Repo-specific dev config (copy mode)
 
 ## Hot Reload Dev Workflow
 
-- `scripts/dev.js`: select vault → auto-install hot-reload plugin → esbuild watch → auto-reload on change
-- Set `VAULT_PATH` env or pass CLI arg to specify vault (for CI/non-interactive environments)
+- `scripts/dev.mjs`: discover vaults → select → mount plugin → esbuild watch → copy output to vault → trigger hot-reload
+- Set `VAULT_PATH` env, `VAULT_NAME` env, or `--vault <name>` CLI flag to skip interactive selection
+- Use `--non-interactive` for CI environments
 - CDP integration: run `verify-plugin.mjs` after build for automated verification
 
 ## Testing

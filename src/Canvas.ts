@@ -2,8 +2,8 @@ import { Canvas } from 'obsidian'
 
 import EaglePlugin from './EaglePlugin'
 import ImageUploadBlockingModal from './ui/ImageUploadBlockingModal'
-import { allFilesAreImages } from './utils/FileList'
 import { buildPasteEventCopy } from './utils/events'
+import { allFilesAreImages } from './utils/FileList'
 
 export function createEagleCanvasPasteHandler(
   plugin: EaglePlugin,
@@ -21,15 +21,18 @@ async function eagleCanvasPaste(
 ) {
   const { files } = e.clipboardData
   if (!allFilesAreImages(files) || files.length != 1) {
-    void originalPasteHandler.call(this, e)
+    await originalPasteHandler.call(this, e)
     return
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
   const canvas: Canvas = this.canvas
-  uploadImageOnCanvas(canvas, plugin, buildPasteEventCopy(e, files)).catch(() => {
-    void originalPasteHandler.call(this, e)
-  })
+
+  try {
+    await uploadImageOnCanvas(canvas, plugin, buildPasteEventCopy(e, files))
+  } catch {
+    await originalPasteHandler.call(this, e)
+  }
 }
 
 function uploadImageOnCanvas(canvas: Canvas, plugin: EaglePlugin, e: ClipboardEvent) {
@@ -39,13 +42,13 @@ function uploadImageOnCanvas(canvas: Canvas, plugin: EaglePlugin, e: ClipboardEv
   const file = e.clipboardData.files[0]
   return plugin.eagleUploader
     .upload(file)
-    .then((url) => {
+    .then(({ fileUrl, itemId }) => {
       if (!modal.isOpen) {
         return
       }
 
       modal.close()
-      pasteRemoteImageToCanvas(canvas, url)
+      pasteRemoteImageToCanvas(canvas, itemId, fileUrl)
     })
     .catch((err) => {
       modal.close()
@@ -53,10 +56,10 @@ function uploadImageOnCanvas(canvas: Canvas, plugin: EaglePlugin, e: ClipboardEv
     })
 }
 
-function pasteRemoteImageToCanvas(canvas: Canvas, imageUrl: string) {
+function pasteRemoteImageToCanvas(canvas: Canvas, itemId: string, imageUrl: string) {
   canvas.createTextNode({
     pos: canvas.posCenter(),
     position: 'center',
-    text: `![](${imageUrl})`,
+    text: `![eagle:${itemId}](${imageUrl})`,
   })
 }

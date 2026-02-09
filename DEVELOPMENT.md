@@ -2,14 +2,15 @@
 
 ### Prerequisites
 
-- Get a [Node.js](https://nodejs.org/)
+- Get a [Node.js](https://nodejs.org/) (Node 20 LTS recommended)
+- Install [pnpm](https://pnpm.io/) (or enable Corepack)
 
 ### Development
 
 - It is recommended to create a new Obsidian vault for development
 - `git clone` the repo to any place on your filesystem and enter the directory you cloned
-- `npm install` once to resolve project dependencies
-- `npm run dev` to mount the plugin to Obsidian vault and have hot-reload
+- `pnpm install` once to resolve project dependencies
+- `pnpm run dev` to mount the plugin to an Obsidian vault and enable hot-reload
   where you would like to test it and get instant feedback on any change in your code
 
 ---

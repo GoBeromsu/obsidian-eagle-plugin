@@ -5,9 +5,6 @@
 # npm
 node_modules
 
-package-lock.json
-pnpm-lock.yaml
-yarn.lock
 
 # build
 main.js
@@ -20,3 +17,6 @@ main.js
 coverage/
 
 test-results.xml
+
+# env
+.env

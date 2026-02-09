@@ -34,7 +34,7 @@ export const filesAndLinksStatsFrom = (referencesByNote: Record<string, Referenc
 export async function replaceAllLocalReferencesWithRemoteOne(
   vault: Vault,
   allFileReferencesByNotes: Record<string, ReferenceCache[]>,
-  remoteImageUrl: string,
+  remoteMarkdownImage: string,
 ) {
   for (const [notePath, refs] of Object.entries(allFileReferencesByNotes)) {
     const noteFile = vault.getFileByPath(notePath)
@@ -50,7 +50,7 @@ export async function replaceAllLocalReferencesWithRemoteOne(
       refsStartOffsetsSortedDescending.forEach((refPos) => {
         updatedContent =
           updatedContent.substring(0, refPos.start) +
-          `![](${remoteImageUrl})` +
+          remoteMarkdownImage +
           updatedContent.substring(refPos.end)
       })
       return updatedContent

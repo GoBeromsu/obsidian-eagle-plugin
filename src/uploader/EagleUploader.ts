@@ -1,8 +1,11 @@
-import { App, requestUrl } from 'obsidian'
 import { tmpdir } from 'os'
+
+import { App, requestUrl } from 'obsidian'
+
 import { EaglePluginSettings } from '../plugin-settings'
-import EagleApiError from './EagleApiError'
+import { filePathToFileUrl } from '../utils/file-url'
 import { generatePseudoRandomId } from '../utils/pseudo-random'
+import EagleApiError from './EagleApiError'
 
 const EAGLE_API_ENDPOINTS = {
   ADD_FROM_PATH: '/api/item/addFromPath',
@@ -12,7 +15,6 @@ const EAGLE_API_ENDPOINTS = {
 } as const
 
 const EAGLE_PROCESSING_DELAY_MS = 300
-const FILE_URL_PROTOCOL = 'file://'
 const EAGLE_URL_PROTOCOL = 'eagle://item/'
 const THUMBNAIL_SUFFIX_PATTERN = /_thumbnail(\.[^.]+)$/
 
@@ -21,17 +23,22 @@ interface EagleFolder {
   name: string
 }
 
+export interface EagleUploadResult {
+  itemId: string
+  fileUrl: string
+}
+
 export default class EagleUploader {
   private readonly app: App
   private readonly settings: EaglePluginSettings
-  private folderIdCache: Map<string, string> = new Map()
+  private folderIdCache: Map<string, string> = new Map<string, string>()
 
   constructor(app: App, settings: EaglePluginSettings) {
     this.app = app
     this.settings = settings
   }
 
-  async upload(image: File): Promise<string> {
+  async upload(image: File): Promise<EagleUploadResult> {
     const tempFilePath = await this.saveToTempFile(image)
 
     let folderId: string | undefined
@@ -41,8 +48,8 @@ export default class EagleUploader {
 
     const itemId = await this.addToEagle(tempFilePath, folderId)
     await new Promise((resolve) => setTimeout(resolve, EAGLE_PROCESSING_DELAY_MS))
-    const imagePath = await this.getImagePath(itemId)
-    return imagePath
+    const fileUrl = await this.getFileUrlForItemId(itemId)
+    return { itemId, fileUrl }
   }
 
   private async saveToTempFile(image: File): Promise<string> {
@@ -55,8 +62,11 @@ export default class EagleUploader {
 
     return new Promise((resolve, reject) => {
       adapter.fs.writeFile(tempFilePath, buffer, (err: any) => {
-        if (err) reject(err)
-        else resolve(tempFilePath)
+        if (err) {
+          reject(err instanceof Error ? err : new Error(String(err)))
+          return
+        }
+        resolve(tempFilePath)
       })
     })
   }
@@ -93,7 +103,7 @@ export default class EagleUploader {
     return data?.data
   }
 
-  private async getImagePath(itemId: string): Promise<string> {
+  async getFileUrlForItemId(itemId: string): Promise<string> {
     const { eagleHost, eaglePort } = this.settings
     const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.THUMBNAIL}?id=${itemId}`
 
@@ -108,7 +118,7 @@ export default class EagleUploader {
     if (data?.status === 'success' && data?.data) {
       const thumbnailPath = data.data
       const originalPath = thumbnailPath.replace(THUMBNAIL_SUFFIX_PATTERN, '$1')
-      return `${FILE_URL_PROTOCOL}${originalPath}`
+      return filePathToFileUrl(originalPath)
     }
 
     return `${EAGLE_URL_PROTOCOL}${itemId}`
@@ -158,9 +168,8 @@ export default class EagleUploader {
   }
 
   async ensureFolderExists(name: string): Promise<string> {
-    if (this.folderIdCache.has(name)) {
-      return this.folderIdCache.get(name)!
-    }
+    const cached = this.folderIdCache.get(name)
+    if (cached !== undefined) return cached
 
     const folders = await this.listFolders()
     const existing = folders.find((f) => f.name === name)

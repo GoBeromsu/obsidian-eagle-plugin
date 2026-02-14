@@ -54,6 +54,35 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
             this.plugin.settings.eagleFolderName = value
           }),
       )
+
+    new Setting(containerEl)
+      .setName('Fallback format for unsupported images')
+      .setDesc('Convert unsupported image formats to this format before upload.')
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption('jpeg', 'jpeg')
+          .addOption('png', 'png')
+          .addOption('webp', 'webp')
+          .setValue(this.plugin.settings.fallbackImageFormat)
+          .onChange((value) => {
+            this.plugin.settings.fallbackImageFormat = value as 'jpeg' | 'png' | 'webp'
+          }),
+      )
+
+    new Setting(containerEl)
+      .setName('JPEG conversion quality')
+      .setDesc('Quality for JPEG conversion output (0~1).')
+      .addText((text) =>
+        text
+          .setPlaceholder('0.9')
+          .setValue(this.plugin.settings.conversionQualityForJpeg.toString())
+          .onChange((value) => {
+            const parsed = Number.parseFloat(value)
+            if (!Number.isNaN(parsed)) {
+              this.plugin.settings.conversionQualityForJpeg = Math.min(1, Math.max(0, parsed))
+            }
+          }),
+      )
   }
 
   override hide() {

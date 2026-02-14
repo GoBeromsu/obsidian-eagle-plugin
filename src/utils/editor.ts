@@ -1,6 +1,13 @@
-import { ClickableToken, Editor, EditorPosition, MarkdownFileInfo, parseLinktext } from 'obsidian'
+import {
+  ClickableToken,
+  Editor,
+  EditorPosition,
+  MarkdownFileInfo,
+  parseLinktext,
+  TFile,
+} from 'obsidian'
 
-const SUPPORTED_FILES_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp']
+import { isKnownImageExtension } from './image-format'
 
 function localEmbeddedImageExpectedBoundaries(
   from: ClickableToken,
@@ -25,9 +32,14 @@ export const findLocalFileUnderCursor = (editor: Editor, ctx: MarkdownFileInfo) 
   if (clickablePrefix !== '![[' || clickableSuffix !== ']]') return null
 
   const lt = parseLinktext(clickable.text)
-  const file = ctx.app.metadataCache.getFirstLinkpathDest(lt.path, ctx.file.path)
+  const linkedFilePath = ctx.app.metadataCache.getFirstLinkpathDest(lt.path, ctx.file.path)
+  if (!linkedFilePath) return null
 
-  if (!SUPPORTED_FILES_EXTENSIONS.includes(file.extension)) return null
+  const file = ctx.app.vault.getAbstractFileByPath(linkedFilePath)
+  if (!(file instanceof TFile)) return null
+  if (!isKnownImageExtension(file.extension)) return null
+
+  if (!file.extension) return null
 
   return {
     file,

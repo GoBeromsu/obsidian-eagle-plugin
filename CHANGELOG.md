@@ -1,5 +1,21 @@
 # obsidian-eagle-plugin changelog
 
+## [2.0.2] - 2026-02-14
+
+### Added
+
+- Add configurable fallback format for unsupported image uploads (`jpeg`/`png`/`webp`) and HEIC/other non-renderable format handling.
+- Detect image type from file signature/extension before deciding conversion.
+- Add conversion quality setting for JPEG fallback output.
+
+### Changed
+
+- Keep existing upload error behavior for conversion failures.
+
+### Fixed
+
+- Improve local image link and file list heuristics for non-standard image extensions in upload paths.
+
 ## [2.0.1] - 2026-02-09
 
 ### Fixed
@@ -57,6 +73,7 @@ This release brings Eagle integration for local image management.
 - Only supports paste action
 
 [2.0.0]: https://github.com/gavvvr/obsidian-eagle-plugin/releases/tag/2.0.0
+[2.0.2]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/2.0.2
 [2.0.1]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/2.0.1
 [1.2.0]: https://github.com/gavvvr/obsidian-imgur-plugin/releases/tag/1.2.0
 [1.1.0]: https://github.com/gavvvr/obsidian-imgur-plugin/releases/tag/1.1.0

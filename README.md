@@ -42,6 +42,13 @@ Go to plugin settings and configure:
 - **Eagle API Host**: The host for your running Eagle instance (default: `localhost`)
 - **Eagle API Port**: The port for your running Eagle instance (default: `41595`)
 - **Eagle Folder Name**: (Optional) The folder name in Eagle where images will be saved. Leave empty to save to the default folder.
+- **Fallback format for unsupported images**: Convert unsupported formats (for example HEIC/HEIF) to this format during upload (`jpeg` / `png` / `webp`).
+- **JPEG conversion quality**: JPEG quality used when the fallback format is `jpeg` (`0`~`1`).
+
+### Rendering policy for unsupported formats
+
+When Obsidian cannot render an uploaded format directly, the plugin converts it on upload to your selected fallback format before inserting into Markdown.
+If conversion fails, the upload is treated as an error and shown through the existing upload error flow.
 
 That's all! Now you are ready to make notes and upload all your images to Eagle.
 

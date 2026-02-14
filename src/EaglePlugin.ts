@@ -20,7 +20,7 @@ import EagleUploader from './uploader/EagleUploader'
 import { findLocalFileUnderCursor, replaceFirstOccurrence } from './utils/editor'
 import { allFilesAreImages } from './utils/FileList'
 import { findMarkdownImageTokens } from './utils/markdown-image'
-import { fixImageTypeIfNeeded, removeReferenceIfPresent } from './utils/misc'
+import { normalizeImageForUpload, removeReferenceIfPresent } from './utils/misc'
 import {
   filesAndLinksStatsFrom,
   getAllCachedReferencesForFile,
@@ -213,7 +213,8 @@ export default class EaglePlugin extends Plugin {
 
     // Fix image type if needed for better compatibility
     const originalUploadFunction = this._eagleUploader.upload.bind(this._eagleUploader)
-    this._eagleUploader.upload = (image: File) => originalUploadFunction(fixImageTypeIfNeeded(image))
+    this._eagleUploader.upload = async (image: File) =>
+      originalUploadFunction(await normalizeImageForUpload(image, this._settings))
   }
 
   private setupEagleHandlers() {

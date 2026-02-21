@@ -18,6 +18,8 @@ const EAGLE_API_ENDPOINTS = {
 const EAGLE_PROCESSING_DELAY_MS = 300
 const EAGLE_URL_PROTOCOL = 'eagle://item/'
 const THUMBNAIL_SUFFIX_PATTERN = /_thumbnail(\.[^.]+)$/
+const CONNECTION_ERROR_HINT =
+  'Cannot connect to Eagle. Make sure Eagle is running and API host/port are correct.'
 
 interface EagleFolder {
   id: string
@@ -61,6 +63,58 @@ export default class EagleUploader {
   constructor(app: App, settings: EaglePluginSettings) {
     this.app = app
     this.settings = settings
+  }
+
+  private async requestJson<T>(url: string, method: 'GET' | 'POST', body?: string): Promise<T> {
+    try {
+      const headers = method === 'POST'
+        ? { 'Content-Type': 'application/json' }
+        : undefined
+
+      const resp = await requestUrl({
+        url,
+        method,
+        headers,
+        body,
+        throw: false,
+      })
+
+      if (resp.status < 200 || resp.status >= 300) {
+        const responseMessage = this.extractResponseMessage(resp.json)
+          || this.extractTextMessage(resp)
+          || `${resp.status} ${resp.statusText || 'Unknown Error'}`
+        throw new EagleApiError(responseMessage)
+      }
+
+      return resp.json as T
+    } catch (error) {
+      if (error instanceof EagleApiError) {
+        throw error
+      }
+
+      const message = this.normalizeRequestError(error)
+      throw new EagleApiError(`${CONNECTION_ERROR_HINT} ${message}`)
+    }
+  }
+
+  private extractTextMessage(resp: { text?: unknown }): string {
+    if (typeof resp.text === 'string' && resp.text.trim()) {
+      return resp.text.trim()
+    }
+    return ''
+  }
+
+  private extractResponseMessage(payload: unknown): string {
+    if (!payload || typeof payload !== 'object') return ''
+    if ('message' in payload && typeof payload.message === 'string' && payload.message.trim()) {
+      return payload.message.trim()
+    }
+    return ''
+  }
+
+  private normalizeRequestError(error: unknown): string {
+    const rawMessage = error instanceof Error ? error.message : String(error)
+    return rawMessage ? `(${rawMessage})` : ''
   }
 
   async upload(image: File): Promise<EagleUploadResult> {
@@ -110,37 +164,42 @@ export default class EagleUploader {
       body.folderId = folderId
     }
 
-    const resp = await requestUrl({
-      url: url,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      throw: false,
-    })
-
-    const data = resp.json
+    const data = await this.requestJson<EagleListResponse>(url, 'POST', JSON.stringify(body))
 
     if (data?.status !== 'success') {
       const errorMsg = data?.message || 'Unknown error'
       throw new EagleApiError(errorMsg)
     }
 
-    return data?.data
+    if (typeof data?.data !== 'string') {
+      throw new EagleApiError('Eagle API returned invalid upload response')
+    }
+
+    return data.data
+  }
+
+  /**
+   * Resolve a renderable file:// URL for an Eagle item.
+   *
+   * Search results already contain `filePath`; use it directly to avoid an
+   * extra thumbnail API call.  Falls back to the thumbnail API only when
+   * `filePath` is absent (e.g. for update-paths flow where only the itemId is
+   * known).
+   */
+  async resolveFileUrl(item: EagleItemSearchResult): Promise<string> {
+    if (item.filePath) {
+      return normalizeEagleApiPathToFileUrl(item.filePath)
+    }
+    return this.getFileUrlForItemId(item.id)
   }
 
   async getFileUrlForItemId(itemId: string): Promise<string> {
     const { eagleHost, eaglePort } = this.settings
     const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.THUMBNAIL}?id=${itemId}`
 
-    const resp = await requestUrl({
-      url: url,
-      method: 'GET',
-      throw: false,
-    })
+    const data = await this.requestJson<EagleListResponse>(url, 'GET')
 
-    const data = resp.json
-
-    if (data?.status === 'success' && data?.data) {
+    if (data?.status === 'success' && typeof data?.data === 'string') {
       const thumbnailPath = data.data
       const originalPath = thumbnailPath.replace(THUMBNAIL_SUFFIX_PATTERN, '$1')
       return normalizeEagleApiPathToFileUrl(originalPath)
@@ -153,19 +212,24 @@ export default class EagleUploader {
     const { eagleHost, eaglePort } = this.settings
     const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.FOLDER_LIST}`
 
-    const resp = await requestUrl({
-      url: url,
-      method: 'GET',
-      throw: false,
-    })
+    const data = await this.requestJson<EagleListResponse>(url, 'GET')
 
-    const data = resp.json
+    if (data?.status === 'success' && Array.isArray(data?.data)) {
+      return data.data.map((folder) => {
+        if (!folder || typeof folder !== 'object') {
+          throw new EagleApiError('Eagle API returned invalid folder list payload')
+        }
 
-    if (data?.status === 'success' && data?.data) {
-      return data.data.map((folder: { id: string; name: string }) => ({
-        id: folder.id,
-        name: folder.name,
-      }))
+        const typedFolder = folder as { id?: unknown; name?: unknown }
+        if (typeof typedFolder.id !== 'string' || typeof typedFolder.name !== 'string') {
+          throw new EagleApiError('Eagle API returned invalid folder payload')
+        }
+
+        return {
+          id: typedFolder.id,
+          name: typedFolder.name,
+        }
+      })
     }
 
     throw new EagleApiError('Failed to list folders')
@@ -175,18 +239,17 @@ export default class EagleUploader {
     const { eagleHost, eaglePort } = this.settings
     const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.FOLDER_CREATE}`
 
-    const resp = await requestUrl({
-      url: url,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ folderName: name }),
-      throw: false,
-    })
+    const data = await this.requestJson<EagleListResponse>(
+      url,
+      'POST',
+      JSON.stringify({ folderName: name }),
+    )
 
-    const data = resp.json
-
-    if (data?.status === 'success' && data?.data?.id) {
-      return data.data.id
+    if (data?.status === 'success' && data?.data && typeof data.data === 'object') {
+      const typedData = data.data as { id?: unknown }
+      if (typeof typedData.id === 'string') {
+        return typedData.id
+      }
     }
 
     throw new EagleApiError('Failed to create folder')
@@ -234,13 +297,7 @@ export default class EagleUploader {
     const { eagleHost, eaglePort } = this.settings
     const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.ITEM_LIST}?${params.toString()}`
 
-    const resp = await requestUrl({
-      url: url,
-      method: 'GET',
-      throw: false,
-    })
-
-    const data = resp.json as EagleListResponse
+    const data = await this.requestJson<EagleListResponse>(url, 'GET')
     if (data?.status !== 'success') {
       const errorMsg = data?.message || 'Failed to search Eagle items'
       throw new EagleApiError(errorMsg)

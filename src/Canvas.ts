@@ -40,8 +40,9 @@ function uploadImageOnCanvas(canvas: Canvas, plugin: EaglePlugin, e: ClipboardEv
   modal.open()
 
   const file = e.clipboardData.files[0]
+  const folderName = plugin.getTargetEagleFolderForActiveFile()
   return plugin.eagleUploader
-    .upload(file)
+    .upload(file, { folderName })
     .then(({ fileUrl, itemId }) => {
       if (!modal.isOpen) {
         return

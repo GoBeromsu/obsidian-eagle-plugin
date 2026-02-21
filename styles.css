@@ -108,6 +108,24 @@
   margin: 0;
 }
 
+.eagle-picker-status {
+  margin: 0 0 10px;
+  font-size: var(--font-ui-small);
+}
+
+.eagle-picker-status-idle,
+.eagle-picker-status-info {
+  color: var(--text-muted);
+}
+
+.eagle-picker-status-loading {
+  color: var(--text-accent);
+}
+
+.eagle-picker-status-error {
+  color: var(--text-error);
+}
+
 /* ── Eagle Folder Mapping Settings ─────────────────────────────────────── */
 
 .eagle-folder-mapping-description {

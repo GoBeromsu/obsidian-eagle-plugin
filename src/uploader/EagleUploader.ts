@@ -59,6 +59,21 @@ interface EagleListResponse {
   data?: unknown
 }
 
+interface EagleRawItemCandidate extends Partial<EagleItemSearchResult> {
+  id?: string
+  name?: string
+  ext?: string
+  tags?: string | string[]
+  annotation?: string
+  isDeleted?: boolean
+  filePath?: string
+  thumbnail?: string
+  thumb?: string
+  thumbnailPath?: string
+  preview?: string
+  previewPath?: string
+}
+
 export default class EagleUploader {
   private readonly app: App
   private readonly settings: EaglePluginSettings
@@ -316,6 +331,26 @@ export default class EagleUploader {
     return this.createFolder(name)
   }
 
+  private firstNonEmptyStringValue(candidate: EagleRawItemCandidate, keys: string[]): string | undefined {
+    for (const key of keys) {
+      const value = (candidate as Record<string, unknown>)[key]
+      if (typeof value === 'string' && value.trim()) {
+        return value
+      }
+    }
+    return undefined
+  }
+
+  private extractThumbnailCandidate(candidate: EagleRawItemCandidate): string | undefined {
+    return this.firstNonEmptyStringValue(candidate, [
+      'thumbnail',
+      'thumb',
+      'thumbnailPath',
+      'preview',
+      'previewPath',
+    ])
+  }
+
   async searchItems({
     keyword,
     limit = 200,
@@ -360,16 +395,7 @@ export default class EagleUploader {
 
     return rawItems
       .map((item) => {
-        const candidate = item as Partial<EagleItemSearchResult> & {
-          id?: string
-          name?: string
-          ext?: string
-          tags?: string | string[]
-          annotation?: string
-          isDeleted?: boolean
-          filePath?: string
-          thumbnail?: string
-        }
+        const candidate = item as EagleRawItemCandidate
 
         if (!candidate.id || typeof candidate.id !== 'string') {
           return null
@@ -389,7 +415,7 @@ export default class EagleUploader {
           annotation: candidate.annotation,
           isDeleted: candidate.isDeleted,
           filePath: candidate.filePath,
-          thumbnail: candidate.thumbnail,
+          thumbnail: this.extractThumbnailCandidate(candidate),
         }
       })
       .filter((item): item is EagleItemSearchResult => item !== null)

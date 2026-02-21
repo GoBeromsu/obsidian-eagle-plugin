@@ -10,6 +10,7 @@ export interface EaglePluginSettings {
   eaglePort: number
   eagleFolderName: string
   folderMappings: ObsidianEagleFolderMapping[]
+  debugSearchDiagnostics: boolean
   fallbackImageFormat: FallbackImageFormat
   conversionQualityForJpeg: number
 }
@@ -19,6 +20,7 @@ export const DEFAULT_SETTINGS: EaglePluginSettings = {
   eaglePort: 41595,
   eagleFolderName: '',
   folderMappings: [],
+  debugSearchDiagnostics: false,
   fallbackImageFormat: 'jpeg',
   conversionQualityForJpeg: 0.9,
 }

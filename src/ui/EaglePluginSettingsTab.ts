@@ -58,6 +58,17 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
       )
 
     new Setting(containerEl)
+      .setName('Search diagnostics (debug)')
+      .setDesc('Log search/thumbnail resolution details to the dev console.')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.debugSearchDiagnostics)
+          .onChange((value) => {
+            this.plugin.settings.debugSearchDiagnostics = value
+          }),
+      )
+
+    new Setting(containerEl)
       .setName('Fallback format for unsupported images')
       .setDesc('Convert unsupported image formats to this format before upload.')
       .addDropdown((dropdown) =>

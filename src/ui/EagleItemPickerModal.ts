@@ -1,7 +1,6 @@
 import { App, Modal } from 'obsidian'
 
 import EagleUploader, { EagleItemSearchResult } from '../uploader/EagleUploader'
-import { normalizeEagleApiPathToFileUrl } from '../utils/file-url'
 
 const THUMBNAIL_CONCURRENCY = 6
 
@@ -91,20 +90,20 @@ export default class EagleItemPickerModal extends Modal {
 
     const thumbWrapper = card.createEl('div', { cls: 'eagle-picker-thumb' })
 
-    // If filePath is present use it directly; otherwise show ext badge and
-    // let loadThumbnails() replace it asynchronously.
+    // If thumbnail metadata exists, render it immediately. If it fails to load,
+    // enqueue fallback loading through Eagle thumbnail API.
     if (item.thumbnail) {
-      const imgUrl = normalizeEagleApiPathToFileUrl(item.thumbnail)
-      thumbWrapper.createEl('img', {
+      const imgUrl = this.uploader.resolveSearchThumbnailUrl(item.thumbnail)
+      const img = thumbWrapper.createEl('img', {
         cls: 'eagle-picker-img',
         attr: { src: imgUrl, loading: 'lazy', alt: item.name || item.id },
       })
-    } else {
-      thumbWrapper.createEl('span', {
-        cls: 'eagle-picker-no-thumb',
-        text: item.ext?.toUpperCase() ?? '?',
+      img.addEventListener('error', () => {
+        this.enqueueThumbnailFallback(item, thumbWrapper)
+        void this.loadThumbnails()
       })
-      this.thumbElMap.set(item.id, thumbWrapper)
+    } else {
+      this.enqueueThumbnailFallback(item, thumbWrapper)
     }
 
     card.createEl('span', {
@@ -127,7 +126,7 @@ export default class EagleItemPickerModal extends Modal {
   }
 
   private async loadThumbnails(): Promise<void> {
-    const pending = this.items.filter((item) => !item.thumbnail && this.thumbElMap.has(item.id))
+    const pending = this.items.filter((item) => this.thumbElMap.has(item.id))
     if (pending.length === 0) return
 
     let cursor = 0
@@ -153,6 +152,7 @@ export default class EagleItemPickerModal extends Modal {
               cls: 'eagle-picker-img',
               attr: { src: url, loading: 'lazy', alt: item.name || item.id },
             })
+            this.thumbElMap.delete(item.id)
           }
         } catch {
           // Keep ext badge on failure
@@ -162,5 +162,14 @@ export default class EagleItemPickerModal extends Modal {
 
     const workerCount = Math.min(THUMBNAIL_CONCURRENCY, pending.length)
     await Promise.all(Array.from({ length: workerCount }, worker))
+  }
+
+  private enqueueThumbnailFallback(item: EagleItemSearchResult, thumbWrapper: HTMLElement): void {
+    thumbWrapper.empty()
+    thumbWrapper.createEl('span', {
+      cls: 'eagle-picker-no-thumb',
+      text: item.ext?.toUpperCase() ?? '?',
+    })
+    this.thumbElMap.set(item.id, thumbWrapper)
   }
 }

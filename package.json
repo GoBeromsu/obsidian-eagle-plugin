@@ -1,6 +1,6 @@
 {
   "name": "obsidian-eagle-plugin",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "type": "module",
   "description": "Upload images to Eagle and integrate with Obsidian notes.",
   "packageManager": "pnpm@10.28.2",
@@ -22,7 +22,7 @@
     "eagle",
     "image-upload"
   ],
-  "author": "gavvvr",
+  "author": "Beomsu Koh",
   "license": "MIT",
   "devDependencies": {
     "@eslint/js": "^8.57.1",

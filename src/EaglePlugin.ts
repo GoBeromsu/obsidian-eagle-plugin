@@ -12,13 +12,14 @@ import {
 
 import { createEagleCanvasPasteHandler } from './Canvas'
 import { DEFAULT_SETTINGS, EaglePluginSettings } from './plugin-settings'
+import EagleApiError from './uploader/EagleApiError'
+import EagleUploader, { type EagleItemSearchResult } from './uploader/EagleUploader'
+import EagleItemPickerModal from './ui/EagleItemPickerModal'
 import EaglePluginSettingsTab from './ui/EaglePluginSettingsTab'
 import InfoModal from './ui/InfoModal'
 import UpdateLinksConfirmationModal from './ui/UpdateLinksConfirmationModal'
-import EagleApiError from './uploader/EagleApiError'
-import EagleUploader from './uploader/EagleUploader'
-import { findLocalFileUnderCursor, replaceFirstOccurrence } from './utils/editor'
 import { allFilesAreImages } from './utils/FileList'
+import { findLocalFileUnderCursor, replaceFirstOccurrence } from './utils/editor'
 import { findMarkdownImageTokens } from './utils/markdown-image'
 import { normalizeImageForUpload, removeReferenceIfPresent } from './utils/misc'
 import {
@@ -205,6 +206,7 @@ export default class EaglePlugin extends Plugin {
     this.setupEagleUploader()
     this.setupEagleHandlers()
     this.addUploadLocalCommand()
+    this.addImportFromEagleLibraryCommand()
     this.addUpdateEmbeddedImagePathsCommands()
   }
 
@@ -243,6 +245,14 @@ export default class EaglePlugin extends Plugin {
       id: 'eagle-upload-local',
       name: 'Upload to Eagle',
       editorCheckCallback: this.editorCheckCallbackForLocalUpload,
+    })
+  }
+
+  private addImportFromEagleLibraryCommand() {
+    this.addCommand({
+      id: 'eagle-import-from-library',
+      name: 'Eagle: Insert image from Eagle (search)',
+      editorCheckCallback: this.editorCheckCallbackForLibraryImport,
     })
   }
 
@@ -410,6 +420,71 @@ export default class EaglePlugin extends Plugin {
     if (checking) return true
 
     void this.doUploadLocalImage({ image: localFile, editor, noteFile: ctx.file })
+  }
+
+  private editorCheckCallbackForLibraryImport = (checking: boolean, editor: Editor) => {
+    if (checking) return true
+
+    void this.importFromLibrary(editor)
+    return true
+  }
+
+  private async importFromLibrary(editor: Editor) {
+    const keyword = window.prompt('Search Eagle by title/metadata')
+    if (!keyword || keyword.trim() === '') {
+      return
+    }
+
+    let results: EagleItemSearchResult[]
+    try {
+      results = await this.eagleUploader.searchItems({
+        keyword,
+        limit: 200,
+        orderBy: 'time',
+      })
+    } catch (error) {
+      if (error instanceof EagleApiError) {
+        new Notice(`Eagle search failed: ${error.message}`)
+      } else {
+        console.error('Unexpected error while searching Eagle:', error)
+        new Notice('Eagle search failed, check dev console')
+      }
+      return
+    }
+
+    const validResults = results.filter((item) => !!item.id)
+    if (validResults.length === 0) {
+      new Notice(`Eagle: No results found for "${keyword}".`)
+      return
+    }
+
+    const insertSelectedItem = async (item: EagleItemSearchResult) => {
+      try {
+        const fileUrl = await this.eagleUploader.getFileUrlForItemId(item.id)
+        const markdownImage = EaglePlugin.markdownImageFor(item.id, fileUrl)
+        editor.replaceRange(markdownImage, editor.getCursor())
+      } catch (error) {
+        if (error instanceof EagleApiError) {
+          new Notice(`Failed to import from Eagle: ${error.message}`)
+        } else {
+          console.error('Unexpected error while importing Eagle image:', error)
+          new Notice('Failed to insert Eagle image.')
+        }
+      }
+    }
+
+    if (validResults.length === 1) {
+      await insertSelectedItem(validResults[0]!)
+      return
+    }
+
+    new EagleItemPickerModal(
+      this.app,
+      validResults,
+      (item) => {
+        void insertSelectedItem(item)
+      },
+    )
   }
 
   private async uploadFileAndEmbedEagleImage(file: File, atPos?: EditorPosition) {

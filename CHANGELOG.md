@@ -1,5 +1,22 @@
 # obsidian-eagle-plugin changelog
 
+## [2.0.8] - 2026-02-21
+
+### Added
+
+- Obsidian folder to Eagle folder mapping feature in plugin settings.
+- Routing utility for deterministic folder matching with longest-prefix priority.
+- Unit tests for mapping resolution and upload folder option precedence.
+
+### Changed
+
+- Upload pipeline now resolves target Eagle folder from the active note path.
+- Canvas paste upload flow now uses the same mapping/fallback routing logic.
+
+### Fixed
+
+- Prevent duplicate Eagle folder creation under concurrent uploads by sharing in-flight folder resolution.
+
 ## [2.0.7] - 2026-02-21
 
 ### Added
@@ -90,9 +107,11 @@
 - Store Eagle item IDs in markdown alt text (`![eagle:<id>](file://...)`) for portability.
 - Commands to re-resolve embedded image paths for the current note or the entire vault.
 
-[2.0.6]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/2.0.6
-[2.0.5]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/2.0.5
-[2.0.4]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/2.0.4
+[2.0.8]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/v2.0.8
+[2.0.7]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/v2.0.7
+[2.0.6]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/v2.0.6
+[2.0.5]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/v2.0.5
+[2.0.4]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/v2.0.4
 [2.0.3]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/2.0.3
 [2.0.2]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/2.0.2
 [2.0.1]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/2.0.1

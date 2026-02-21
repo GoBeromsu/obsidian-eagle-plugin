@@ -49,7 +49,11 @@ export interface EagleUploadResult {
   fileUrl: string
 }
 
-type EagleListResponse = {
+export interface EagleUploadOptions {
+  folderName?: string
+}
+
+interface EagleListResponse {
   status?: string
   message?: string
   data?: unknown
@@ -59,6 +63,7 @@ export default class EagleUploader {
   private readonly app: App
   private readonly settings: EaglePluginSettings
   private folderIdCache: Map<string, string> = new Map<string, string>()
+  private folderIdInFlight: Map<string, Promise<string>> = new Map<string, Promise<string>>()
 
   constructor(app: App, settings: EaglePluginSettings) {
     this.app = app
@@ -113,16 +118,21 @@ export default class EagleUploader {
   }
 
   private normalizeRequestError(error: unknown): string {
-    const rawMessage = error instanceof Error ? error.message : String(error)
+    const rawMessage = error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : ''
     return rawMessage ? `(${rawMessage})` : ''
   }
 
-  async upload(image: File): Promise<EagleUploadResult> {
+  async upload(image: File, options?: EagleUploadOptions): Promise<EagleUploadResult> {
     const tempFilePath = await this.saveToTempFile(image)
+    const targetFolderName = options?.folderName?.trim() || this.settings.eagleFolderName.trim()
 
     let folderId: string | undefined
-    if (this.settings.eagleFolderName) {
-      folderId = await this.ensureFolderExists(this.settings.eagleFolderName)
+    if (targetFolderName) {
+      folderId = await this.ensureFolderExists(targetFolderName)
     }
 
     const itemId = await this.addToEagle(tempFilePath, folderId)
@@ -276,17 +286,29 @@ export default class EagleUploader {
     const cached = this.folderIdCache.get(name)
     if (cached !== undefined) return cached
 
+    const inFlight = this.folderIdInFlight.get(name)
+    if (inFlight !== undefined) return inFlight
+
+    const resolvePromise = this.resolveFolderId(name)
+      .then((folderId) => {
+        this.folderIdCache.set(name, folderId)
+        return folderId
+      })
+      .finally(() => {
+        this.folderIdInFlight.delete(name)
+      })
+
+    this.folderIdInFlight.set(name, resolvePromise)
+    return resolvePromise
+  }
+
+  private async resolveFolderId(name: string): Promise<string> {
     const folders = await this.listFolders()
     const existing = folders.find((f) => f.name === name)
-
     if (existing) {
-      this.folderIdCache.set(name, existing.id)
       return existing.id
     }
-
-    const newId = await this.createFolder(name)
-    this.folderIdCache.set(name, newId)
-    return newId
+    return this.createFolder(name)
   }
 
   async searchItems({

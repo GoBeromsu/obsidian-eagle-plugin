@@ -12,17 +12,18 @@ import {
 
 import { createEagleCanvasPasteHandler } from './Canvas'
 import { DEFAULT_SETTINGS, EaglePluginSettings } from './plugin-settings'
-import EagleApiError from './uploader/EagleApiError'
-import EagleUploader, { type EagleItemSearchResult } from './uploader/EagleUploader'
 import EagleItemPickerModal from './ui/EagleItemPickerModal'
 import EaglePluginSettingsTab from './ui/EaglePluginSettingsTab'
+import EagleSearchModal from './ui/EagleSearchModal'
 import InfoModal from './ui/InfoModal'
 import UpdateLinksConfirmationModal from './ui/UpdateLinksConfirmationModal'
-import { allFilesAreImages } from './utils/FileList'
+import EagleApiError from './uploader/EagleApiError'
+import EagleUploader, { type EagleItemSearchResult } from './uploader/EagleUploader'
 import { findLocalFileUnderCursor, replaceFirstOccurrence } from './utils/editor'
+import { allFilesAreImages } from './utils/FileList'
+import { resolveMappedEagleFolder, sanitizeFolderMappings } from './utils/folder-mapping'
 import { findMarkdownImageTokens } from './utils/markdown-image'
 import { normalizeImageForUpload, removeReferenceIfPresent } from './utils/misc'
-import EagleSearchModal from './ui/EagleSearchModal'
 import {
   filesAndLinksStatsFrom,
   getAllCachedReferencesForFile,
@@ -190,9 +191,12 @@ export default class EaglePlugin extends Plugin {
       ...DEFAULT_SETTINGS,
       ...((await this.loadData()) as EaglePluginSettings),
     }
+
+    this._settings.folderMappings = sanitizeFolderMappings(this._settings.folderMappings ?? [])
   }
 
   async saveSettings(): Promise<void> {
+    this._settings.folderMappings = sanitizeFolderMappings(this._settings.folderMappings ?? [])
     await this.saveData(this._settings)
   }
 
@@ -425,7 +429,7 @@ export default class EaglePlugin extends Plugin {
     return true
   }
 
-  private async importFromLibrary(editor: Editor) {
+  private importFromLibrary(editor: Editor) {
     new EagleSearchModal(this.app, (keyword) => {
       void this.executeEagleImport(editor, keyword)
     }).open()
@@ -473,8 +477,9 @@ export default class EaglePlugin extends Plugin {
       }
     }
 
-    if (validResults.length === 1) {
-      await insertSelectedItem(validResults[0]!)
+    const firstResult = validResults[0]
+    if (validResults.length === 1 && firstResult) {
+      await insertSelectedItem(firstResult)
       return
     }
 
@@ -494,8 +499,9 @@ export default class EaglePlugin extends Plugin {
 
     let markdownImage: string
     try {
+      const folderName = this.resolveTargetEagleFolderForActiveFile()
       const normalizedFile = await normalizeImageForUpload(file, this._settings)
-      const { itemId, fileUrl } = await this.eagleUploader.upload(normalizedFile)
+      const { itemId, fileUrl } = await this.eagleUploader.upload(normalizedFile, { folderName })
       markdownImage = EaglePlugin.markdownImageFor(itemId, fileUrl)
     } catch (e) {
       if (e instanceof EagleApiError) {
@@ -543,5 +549,20 @@ export default class EaglePlugin extends Plugin {
   private get activeEditor(): Editor {
     const mdView = this.app.workspace.getActiveViewOfType(MarkdownView)
     return mdView.editor
+  }
+
+  getTargetEagleFolderForActiveFile(): string | undefined {
+    return this.resolveTargetEagleFolderForActiveFile()
+  }
+
+  private resolveTargetEagleFolderForActiveFile(): string | undefined {
+    const activeFilePath = this.app.workspace.getActiveFile()?.path ?? null
+    const mappedFolderName = resolveMappedEagleFolder(activeFilePath, this._settings.folderMappings)
+    if (mappedFolderName) {
+      return mappedFolderName
+    }
+
+    const fallbackFolderName = this._settings.eagleFolderName.trim()
+    return fallbackFolderName || undefined
   }
 }

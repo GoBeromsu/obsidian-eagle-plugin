@@ -16,7 +16,7 @@ export default class EagleSearchModal extends Modal {
       .setValue('')
 
     this.textInput.inputEl.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
+      if (event.key === 'Enter' && !event.isComposing) {
         event.preventDefault()
         this.submit()
       }
@@ -40,6 +40,8 @@ export default class EagleSearchModal extends Modal {
     const keyword = this.textInput.getValue().trim()
     if (!keyword) return
 
+    // Blur before closing to prevent Korean IME composition from being flushed into the editor
+    this.textInput.inputEl.blur()
     this.close()
     this.keywordValueChanged(keyword)
   }

@@ -484,6 +484,7 @@ export default class EaglePlugin extends Plugin {
       (item) => {
         void insertSelectedItem(item)
       },
+      this.eagleUploader,
     )
   }
 

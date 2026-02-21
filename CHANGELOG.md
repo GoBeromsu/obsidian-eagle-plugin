@@ -1,5 +1,33 @@
 # obsidian-eagle-plugin changelog
 
+## [2.0.7] - 2026-02-21
+
+### Added
+
+- Thumbnail grid picker: search results now show image thumbnails in a visual grid
+  instead of a text-only fuzzy list. Thumbnails load lazily (6 parallel API calls)
+  so the modal opens immediately while previews fill in.
+- `EagleUploader.getThumbnailFileUrl(itemId)` — new method that returns the Eagle
+  thumbnail as a `file://` URL for display without extra path transformation.
+- `styles.css` — dedicated stylesheet for the picker modal grid layout, included
+  in CI release artifacts and loaded automatically by Obsidian.
+
+### Fixed
+
+- Korean IME: typing a multi-syllable keyword (e.g. "지혜") no longer dumps the
+  partially-composed character into the editor when the search modal closes.
+  Fixed by checking `event.isComposing` on Enter and blurring the input before close.
+
+### Changed
+
+- `EagleItemPickerModal` rewritten from `FuzzySuggestModal` to a custom `Modal`
+  with a 760px-wide grid, real-time text filter, and lazy thumbnail loading.
+- CI `release.yml` now packages and uploads `styles.css` alongside `main.js` /
+  `manifest.json`.
+- `dev.config.mjs` copies and watches `styles.css` during local development.
+- `scripts/verify-plugin.mjs` bug fixes: removed `stdio` array from `execSync`
+  options; corrected `typeof` assert comparison from `'"object"'` to `'object'`.
+
 ## [2.0.6] - 2026-02-21
 
 ### Changed

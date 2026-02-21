@@ -1,5 +1,14 @@
 # obsidian-eagle-plugin changelog
 
+## [2.0.9] - 2026-02-21
+
+### Fixed
+
+- Search modal thumbnails now render for mixed Eagle thumbnail formats by resolving
+  local file paths, `/api/...` paths, and absolute `http(s)://` / `file://` URLs.
+- Added fallback behavior: when a metadata thumbnail fails to load, the modal now
+  retries thumbnail rendering via Eagle thumbnail API fetch.
+
 ## [2.0.8] - 2026-02-21
 
 ### Added
@@ -107,6 +116,7 @@
 - Store Eagle item IDs in markdown alt text (`![eagle:<id>](file://...)`) for portability.
 - Commands to re-resolve embedded image paths for the current note or the entire vault.
 
+[2.0.9]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/v2.0.9
 [2.0.8]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/v2.0.8
 [2.0.7]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/v2.0.7
 [2.0.6]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/v2.0.6

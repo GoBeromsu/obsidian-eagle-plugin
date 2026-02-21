@@ -208,6 +208,23 @@ export default class EagleUploader {
     return `${EAGLE_URL_PROTOCOL}${itemId}`
   }
 
+  /**
+   * Returns a file:// URL pointing to the Eagle-generated thumbnail image.
+   * Used for displaying preview images in the picker modal without extra processing.
+   */
+  async getThumbnailFileUrl(itemId: string): Promise<string> {
+    const { eagleHost, eaglePort } = this.settings
+    const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.THUMBNAIL}?id=${itemId}`
+
+    const data = await this.requestJson<EagleListResponse>(url, 'GET')
+
+    if (data?.status === 'success' && typeof data?.data === 'string') {
+      return normalizeEagleApiPathToFileUrl(data.data)
+    }
+
+    throw new EagleApiError(`Cannot load thumbnail for item ${itemId}`)
+  }
+
   async listFolders(): Promise<EagleFolder[]> {
     const { eagleHost, eaglePort } = this.settings
     const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.FOLDER_LIST}`

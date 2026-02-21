@@ -22,6 +22,7 @@ import { allFilesAreImages } from './utils/FileList'
 import { findLocalFileUnderCursor, replaceFirstOccurrence } from './utils/editor'
 import { findMarkdownImageTokens } from './utils/markdown-image'
 import { normalizeImageForUpload, removeReferenceIfPresent } from './utils/misc'
+import EagleSearchModal from './ui/EagleSearchModal'
 import {
   filesAndLinksStatsFrom,
   getAllCachedReferencesForFile,
@@ -430,15 +431,19 @@ export default class EaglePlugin extends Plugin {
   }
 
   private async importFromLibrary(editor: Editor) {
-    const keyword = window.prompt('Search Eagle by title/metadata')
-    if (!keyword || keyword.trim() === '') {
-      return
-    }
+    new EagleSearchModal(this.app, (keyword) => {
+      void this.executeEagleImport(editor, keyword)
+    }).open()
+  }
+
+  private async executeEagleImport(editor: Editor, keyword: string) {
+    const trimmedKeyword = keyword.trim()
+    if (!trimmedKeyword) return
 
     let results: EagleItemSearchResult[]
     try {
       results = await this.eagleUploader.searchItems({
-        keyword,
+        keyword: trimmedKeyword,
         limit: 200,
         orderBy: 'time',
       })
@@ -454,7 +459,7 @@ export default class EaglePlugin extends Plugin {
 
     const validResults = results.filter((item) => !!item.id)
     if (validResults.length === 0) {
-      new Notice(`Eagle: No results found for "${keyword}".`)
+      new Notice(`Eagle: No results found for "${trimmedKeyword}".`)
       return
     }
 

@@ -1,5 +1,11 @@
 # obsidian-eagle-plugin changelog
 
+## [2.0.4] - 2026-02-21
+
+### Fixed
+
+- Replace unsupported `window.prompt` usage in the Eagle search-import command with an Obsidian modal, fixing search flow on Electron environments that block native prompts.
+
 ## [2.0.3] - 2026-02-21
 
 ### Added
@@ -33,5 +39,7 @@
 - Store Eagle item IDs in markdown alt text (`![eagle:<id>](file://...)`) for portability.
 - Commands to re-resolve embedded image paths for the current note or the entire vault.
 
+[2.0.4]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/2.0.4
+[2.0.3]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/2.0.3
 [2.0.2]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/2.0.2
 [2.0.1]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/2.0.1

@@ -12,6 +12,7 @@ const EAGLE_API_ENDPOINTS = {
   THUMBNAIL: '/api/item/thumbnail',
   FOLDER_LIST: '/api/folder/list',
   FOLDER_CREATE: '/api/folder/create',
+  ITEM_LIST: '/api/item/list',
 } as const
 
 const EAGLE_PROCESSING_DELAY_MS = 300
@@ -23,9 +24,33 @@ interface EagleFolder {
   name: string
 }
 
+export interface EagleItemSearchOptions {
+  keyword: string
+  limit?: number
+  orderBy?: string
+  offset?: number
+}
+
+export interface EagleItemSearchResult {
+  id: string
+  name: string
+  ext?: string
+  tags?: string[]
+  annotation?: string
+  isDeleted?: boolean
+  filePath?: string
+  thumbnail?: string
+}
+
 export interface EagleUploadResult {
   itemId: string
   fileUrl: string
+}
+
+type EagleListResponse = {
+  status?: string
+  message?: string
+  data?: unknown
 }
 
 export default class EagleUploader {
@@ -182,5 +207,90 @@ export default class EagleUploader {
     const newId = await this.createFolder(name)
     this.folderIdCache.set(name, newId)
     return newId
+  }
+
+  async searchItems({
+    keyword,
+    limit = 200,
+    orderBy,
+    offset = 0,
+  }: EagleItemSearchOptions): Promise<EagleItemSearchResult[]> {
+    const trimmedKeyword = keyword.trim()
+    if (!trimmedKeyword) return []
+
+    const params = new URLSearchParams({
+      keyword: trimmedKeyword,
+      offset: String(offset),
+    })
+
+    if (limit !== undefined) {
+      params.set('limit', String(limit))
+    }
+
+    if (orderBy) {
+      params.set('orderBy', orderBy)
+    }
+
+    const { eagleHost, eaglePort } = this.settings
+    const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.ITEM_LIST}?${params.toString()}`
+
+    const resp = await requestUrl({
+      url: url,
+      method: 'GET',
+      throw: false,
+    })
+
+    const data = resp.json as EagleListResponse
+    if (data?.status !== 'success') {
+      const errorMsg = data?.message || 'Failed to search Eagle items'
+      throw new EagleApiError(errorMsg)
+    }
+
+    const maybeItems = data.data
+    const rawItems = Array.isArray(maybeItems)
+      ? maybeItems
+      : maybeItems && typeof maybeItems === 'object'
+        ? ((maybeItems as { items?: unknown }).items || (maybeItems as { data?: unknown }).data)
+        : []
+
+    if (!Array.isArray(rawItems)) {
+      throw new EagleApiError('Eagle API returned invalid item list payload')
+    }
+
+    return rawItems
+      .map((item) => {
+        const candidate = item as Partial<EagleItemSearchResult> & {
+          id?: string
+          name?: string
+          ext?: string
+          tags?: string | string[]
+          annotation?: string
+          isDeleted?: boolean
+          filePath?: string
+          thumbnail?: string
+        }
+
+        if (!candidate.id || typeof candidate.id !== 'string') {
+          return null
+        }
+
+        const tags = Array.isArray(candidate.tags)
+          ? candidate.tags.filter((tag): tag is string => typeof tag === 'string')
+          : typeof candidate.tags === 'string'
+            ? candidate.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
+            : undefined
+
+        return {
+          id: candidate.id,
+          name: candidate.name || candidate.id,
+          ext: candidate.ext,
+          tags,
+          annotation: candidate.annotation,
+          isDeleted: candidate.isDeleted,
+          filePath: candidate.filePath,
+          thumbnail: candidate.thumbnail,
+        }
+      })
+      .filter((item): item is EagleItemSearchResult => item !== null)
   }
 }

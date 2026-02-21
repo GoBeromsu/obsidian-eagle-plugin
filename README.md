@@ -23,6 +23,7 @@ using Eagle's powerful tagging and categorization features.
 - Upload images by either pasting from the clipboard or by dragging them from the file system
 - Animated gifs upload support on drag-and-drop
 - Integration with Eagle's library management system
+- Search Eagle library from Obsidian command palette and insert selected images by title/metadata
 
 ## Installation
 
@@ -44,6 +45,25 @@ Go to plugin settings and configure:
 - **Eagle Folder Name**: (Optional) The folder name in Eagle where images will be saved. Leave empty to save to the default folder.
 - **Fallback format for unsupported images**: Convert unsupported formats (for example HEIC/HEIF) to this format during upload (`jpeg` / `png` / `webp`).
 - **JPEG conversion quality**: JPEG quality used when the fallback format is `jpeg` (`0`~`1`).
+
+## Search & import images from Eagle
+
+You can import images already in your Eagle library directly into the current note:
+
+1. Open the command palette and run **Eagle: Insert image from Eagle (search)**.
+2. Enter a keyword. The plugin searches Eagle item title/annotation/tags through the default API keyword search.
+3. Select the item from the list and it will insert:
+
+```
+![eagle:<itemId>](file://...)
+```
+
+The command works at the current cursor location. If only one image is found, it is inserted immediately.
+
+If the current absolute file path is not valid after moving machine/library, use:
+
+- `Eagle: Update embedded image paths (current note)`
+- `Eagle: Update embedded image paths (entire vault)`
 
 ### Rendering policy for unsupported formats
 

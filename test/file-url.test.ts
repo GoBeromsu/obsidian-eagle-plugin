@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   filePathToFileUrl,
   normalizeEagleApiPathToFileUrl,
+  resolveEagleThumbnailUrl,
 } from '../src/utils/file-url'
 
 describe(filePathToFileUrl, () => {
@@ -47,5 +48,22 @@ describe(normalizeEagleApiPathToFileUrl, () => {
   it('does not fail on malformed percent path and still returns a safe file URL', () => {
     const url = normalizeEagleApiPathToFileUrl('/Users/me/images/%E0%A4')
     expect(url).toBe('file:///Users/me/images/%25E0%25A4')
+  })
+})
+
+describe(resolveEagleThumbnailUrl.name, () => {
+  it('resolves api-relative thumbnail path against eagle host and port', () => {
+    const url = resolveEagleThumbnailUrl('/api/item/thumbnail?id=abc', 'localhost', 41595)
+    expect(url).toBe('http://localhost:41595/api/item/thumbnail?id=abc')
+  })
+
+  it('keeps absolute http url as-is', () => {
+    const url = resolveEagleThumbnailUrl('https://example.com/thumb.jpg', 'localhost', 41595)
+    expect(url).toBe('https://example.com/thumb.jpg')
+  })
+
+  it('normalizes local file path into file:// url', () => {
+    const url = resolveEagleThumbnailUrl('/Users/me/images/IMG (1).jpg', 'localhost', 41595)
+    expect(url).toBe('file:///Users/me/images/IMG%20%281%29.jpg')
   })
 })

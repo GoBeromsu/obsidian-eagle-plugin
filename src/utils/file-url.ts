@@ -84,3 +84,25 @@ export function normalizeEagleApiPathToFileUrl(rawPath: string): string {
   const decoded = normalizeEncodedPath(candidate)
   return filePathToFileUrl(decoded)
 }
+
+export function resolveEagleThumbnailUrl(
+  rawThumbnail: string,
+  eagleHost: string,
+  eaglePort: number,
+): string {
+  const candidate = rawThumbnail.trim()
+  if (!candidate) {
+    return ''
+  }
+
+  if (/^https?:\/\//i.test(candidate)) {
+    return candidate
+  }
+
+  if (/^\/?api\//i.test(candidate)) {
+    const apiPath = candidate.startsWith('/') ? candidate : `/${candidate}`
+    return `http://${eagleHost}:${eaglePort}${apiPath}`
+  }
+
+  return normalizeEagleApiPathToFileUrl(candidate)
+}

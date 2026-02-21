@@ -3,7 +3,7 @@ import { tmpdir } from 'os'
 import { App, requestUrl } from 'obsidian'
 
 import { EaglePluginSettings } from '../plugin-settings'
-import { normalizeEagleApiPathToFileUrl } from '../utils/file-url'
+import { normalizeEagleApiPathToFileUrl, resolveEagleThumbnailUrl } from '../utils/file-url'
 import { generatePseudoRandomId } from '../utils/pseudo-random'
 import EagleApiError from './EagleApiError'
 
@@ -201,6 +201,11 @@ export default class EagleUploader {
       return normalizeEagleApiPathToFileUrl(item.filePath)
     }
     return this.getFileUrlForItemId(item.id)
+  }
+
+  resolveSearchThumbnailUrl(rawThumbnail: string): string {
+    const { eagleHost, eaglePort } = this.settings
+    return resolveEagleThumbnailUrl(rawThumbnail, eagleHost, eaglePort)
   }
 
   async getFileUrlForItemId(itemId: string): Promise<string> {

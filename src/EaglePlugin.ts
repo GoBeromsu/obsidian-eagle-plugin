@@ -213,11 +213,6 @@ export default class EaglePlugin extends Plugin {
 
   setupEagleUploader(): void {
     this._eagleUploader = new EagleUploader(this.app, this._settings)
-
-    // Fix image type if needed for better compatibility
-    const originalUploadFunction = this._eagleUploader.upload.bind(this._eagleUploader)
-    this._eagleUploader.upload = async (image: File) =>
-      originalUploadFunction(await normalizeImageForUpload(image, this._settings))
   }
 
   private setupEagleHandlers() {
@@ -465,7 +460,7 @@ export default class EaglePlugin extends Plugin {
 
     const insertSelectedItem = async (item: EagleItemSearchResult) => {
       try {
-        const fileUrl = await this.eagleUploader.getFileUrlForItemId(item.id)
+        const fileUrl = await this.eagleUploader.resolveFileUrl(item)
         const markdownImage = EaglePlugin.markdownImageFor(item.id, fileUrl)
         editor.replaceRange(markdownImage, editor.getCursor())
       } catch (error) {
@@ -498,7 +493,8 @@ export default class EaglePlugin extends Plugin {
 
     let markdownImage: string
     try {
-      const { itemId, fileUrl } = await this.eagleUploader.upload(file)
+      const normalizedFile = await normalizeImageForUpload(file, this._settings)
+      const { itemId, fileUrl } = await this.eagleUploader.upload(normalizedFile)
       markdownImage = EaglePlugin.markdownImageFor(itemId, fileUrl)
     } catch (e) {
       if (e instanceof EagleApiError) {

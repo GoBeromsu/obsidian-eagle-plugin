@@ -65,6 +65,17 @@ export function filePathToFileUrl(filePath: string): string {
   return `${FILE_URL_PROTOCOL}${encodedSegments.join('/')}`
 }
 
+/**
+ * Convert an Eagle API path to a file:// URL that Obsidian reliably renders.
+ *
+ * Contract: Eagle API endpoints (/api/item/thumbnail, /api/item/list `filePath`)
+ * return plain OS filesystem paths with no percent-encoding.
+ * Example: `/Users/foo/Eagle.library/…/image_thumbnail.jpg`
+ *
+ * The decode step is kept defensively for edge cases where Eagle returns a
+ * `file://` URL or percent-encoded path (observed on some Eagle versions).
+ * When the path contains no `%XX` sequences the decode is a no-op.
+ */
 export function normalizeEagleApiPathToFileUrl(rawPath: string): string {
   let candidate = rawPath.trim()
   candidate = candidate.replace(/^file:\/\//, '').replace(/^\/\//, '')

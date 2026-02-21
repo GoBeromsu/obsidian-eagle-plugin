@@ -1,5 +1,11 @@
 # obsidian-eagle-plugin changelog
 
+## [2.0.5] - 2026-02-21
+
+### Fixed
+
+- Normalize Eagle API thumbnail/file paths before generating `file://` URLs to prevent double-encoding issues for non-ASCII filenames during search-import.
+
 ## [2.0.4] - 2026-02-21
 
 ### Fixed
@@ -39,6 +45,7 @@
 - Store Eagle item IDs in markdown alt text (`![eagle:<id>](file://...)`) for portability.
 - Commands to re-resolve embedded image paths for the current note or the entire vault.
 
+[2.0.5]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/2.0.5
 [2.0.4]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/2.0.4
 [2.0.3]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/2.0.3
 [2.0.2]: https://github.com/GoBeromsu/obsidian-eagle-plugin/releases/tag/2.0.2

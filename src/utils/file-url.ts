@@ -1,5 +1,34 @@
 const FILE_URL_PROTOCOL = 'file://'
 
+function safeDecodePath(path: string): string | null {
+  try {
+    return decodeURIComponent(path)
+  } catch {
+    return null
+  }
+}
+
+function normalizeEncodedPath(path: string): string {
+  let normalized = path
+
+  if (!/%[0-9A-Fa-f]{2}/.test(normalized)) {
+    return normalized
+  }
+
+  const firstPass = safeDecodePath(normalized)
+  if (firstPass === null) {
+    return normalized
+  }
+
+  normalized = firstPass
+  if (!/%[0-9A-Fa-f]{2}/.test(normalized)) {
+    return normalized
+  }
+
+  const secondPass = safeDecodePath(normalized)
+  return secondPass ?? firstPass
+}
+
 function encodePathSegment(segment: string) {
   return encodeURIComponent(segment).replaceAll('(', '%28').replaceAll(')', '%29')
 }
@@ -34,4 +63,13 @@ export function filePathToFileUrl(filePath: string): string {
   })
 
   return `${FILE_URL_PROTOCOL}${encodedSegments.join('/')}`
+}
+
+export function normalizeEagleApiPathToFileUrl(rawPath: string): string {
+  let candidate = rawPath.trim()
+  candidate = candidate.replace(/^file:\/\//, '').replace(/^\/\//, '')
+  candidate = candidate.replaceAll('\\', '/')
+
+  const decoded = normalizeEncodedPath(candidate)
+  return filePathToFileUrl(decoded)
 }

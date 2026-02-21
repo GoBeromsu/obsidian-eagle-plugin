@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { filePathToFileUrl } from '../src/utils/file-url'
+import {
+  filePathToFileUrl,
+  normalizeEagleApiPathToFileUrl,
+} from '../src/utils/file-url'
 
 describe(filePathToFileUrl, () => {
   it('percent-encodes spaces, unicode, and parentheses', () => {
@@ -21,3 +24,28 @@ describe(filePathToFileUrl, () => {
   })
 })
 
+describe(normalizeEagleApiPathToFileUrl, () => {
+  it('decodes percent-encoded Eagle api path without double-encoding', () => {
+    const url = normalizeEagleApiPathToFileUrl('/Users/me/images/%EC%A7%80%ED%98%9C%EB%9E%80.jpg')
+    expect(url).toBe('file:///Users/me/images/%EC%A7%80%ED%98%9C%EB%9E%80.jpg')
+  })
+
+  it('handles double-encoded Eagle api path', () => {
+    const url = normalizeEagleApiPathToFileUrl(
+      '/Users/me/images/%25EC%25A7%2580%25ED%2598%259C%25EB%259E%2580.jpg',
+    )
+    expect(url).toBe('file:///Users/me/images/%EC%A7%80%ED%98%9C%EB%9E%80.jpg')
+  })
+
+  it('normalizes file:// prefixed response path', () => {
+    const url = normalizeEagleApiPathToFileUrl(
+      'file:///Users/me/images/2024/01/%EC%A7%80%ED%98%9C%EB%9E%80(01).jpg',
+    )
+    expect(url).toBe('file:///Users/me/images/2024/01/%EC%A7%80%ED%98%9C%EB%9E%80%2801%29.jpg')
+  })
+
+  it('does not fail on malformed percent path and still returns a safe file URL', () => {
+    const url = normalizeEagleApiPathToFileUrl('/Users/me/images/%E0%A4')
+    expect(url).toBe('file:///Users/me/images/%25E0%25A4')
+  })
+})

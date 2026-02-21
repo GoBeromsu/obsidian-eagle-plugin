@@ -3,7 +3,7 @@ import { tmpdir } from 'os'
 import { App, requestUrl } from 'obsidian'
 
 import { EaglePluginSettings } from '../plugin-settings'
-import { filePathToFileUrl } from '../utils/file-url'
+import { normalizeEagleApiPathToFileUrl } from '../utils/file-url'
 import { generatePseudoRandomId } from '../utils/pseudo-random'
 import EagleApiError from './EagleApiError'
 
@@ -143,7 +143,7 @@ export default class EagleUploader {
     if (data?.status === 'success' && data?.data) {
       const thumbnailPath = data.data
       const originalPath = thumbnailPath.replace(THUMBNAIL_SUFFIX_PATTERN, '$1')
-      return filePathToFileUrl(originalPath)
+      return normalizeEagleApiPathToFileUrl(originalPath)
     }
 
     return `${EAGLE_URL_PROTOCOL}${itemId}`

@@ -4,6 +4,7 @@ import { App, requestUrl } from 'obsidian'
 
 import { EaglePluginSettings } from '../plugin-settings'
 import { normalizeEagleApiPathToFileUrl, resolveEagleThumbnailUrl } from '../utils/file-url'
+import { extractFileExtension } from '../utils/image-format'
 import { generatePseudoRandomId } from '../utils/pseudo-random'
 import EagleApiError from './EagleApiError'
 
@@ -48,6 +49,7 @@ export interface EagleItemSearchResult {
 export interface EagleUploadResult {
   itemId: string
   fileUrl: string
+  ext: string
 }
 
 export interface EagleUploadOptions {
@@ -81,6 +83,7 @@ export default class EagleUploader {
   private folderIdCache: Map<string, string> = new Map<string, string>()
   private folderIdInFlight: Map<string, Promise<string>> = new Map<string, Promise<string>>()
   private readonly fileUrlCache = new Map<string, string>()
+  private readonly fileUrlInFlight = new Map<string, Promise<string>>()
 
   constructor(app: App, settings: EaglePluginSettings) {
     this.app = app
@@ -155,7 +158,8 @@ export default class EagleUploader {
     const itemId = await this.addToEagle(tempFilePath, folderId)
     await new Promise((resolve) => setTimeout(resolve, EAGLE_PROCESSING_DELAY_MS))
     const fileUrl = await this.getFileUrlForItemId(itemId)
-    return { itemId, fileUrl }
+    const ext = (fileUrl.startsWith('file://') ? extractFileExtension(fileUrl) : '') || extractFileExtension(image.name) || 'jpg'
+    return { itemId, fileUrl, ext }
   }
 
   private async saveToTempFile(image: File): Promise<string> {
@@ -229,12 +233,30 @@ export default class EagleUploader {
     const cached = this.fileUrlCache.get(itemId)
     if (cached) return cached
 
-    const { eagleHost, eaglePort } = this.settings
+    const inFlight = this.fileUrlInFlight.get(itemId)
+    if (inFlight) return inFlight
 
-    // Use item info to get exact name + extension.
-    // The thumbnail endpoint always returns .png thumbnails regardless of the original
-    // file format, so deriving the original path from the thumbnail path gives the wrong
-    // extension for non-PNG originals (e.g. .jpg files would resolve as .png).
+    const promise = this.fetchFileUrlForItemId(itemId)
+      .then((url) => {
+        if (url.startsWith('file://')) {
+          this.fileUrlCache.set(itemId, url)
+        }
+        return url
+      })
+      .finally(() => {
+        this.fileUrlInFlight.delete(itemId)
+      })
+
+    this.fileUrlInFlight.set(itemId, promise)
+    return promise
+  }
+
+  // Use item info to get exact name + extension.
+  // The thumbnail endpoint always returns .png thumbnails regardless of the original
+  // file format, so deriving the original path from the thumbnail path gives the wrong
+  // extension for non-PNG originals (e.g. .jpg files would resolve as .png).
+  private async fetchFileUrlForItemId(itemId: string): Promise<string> {
+    const { eagleHost, eaglePort } = this.settings
     const infoUrl = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.ITEM_INFO}?id=${itemId}`
     const infoData = await this.requestJson<{ status: string; data?: { name?: string; ext?: string } }>(infoUrl, 'GET')
 
@@ -249,9 +271,7 @@ export default class EagleUploader {
         console.warn('Eagle: cannot resolve library root — falling back to eagle:// URL', { itemId })
       } else {
         const filePath = `${libraryRoot}/images/${itemId}.info/${name}.${ext}`
-        const result = normalizeEagleApiPathToFileUrl(filePath)
-        this.fileUrlCache.set(itemId, result)
-        return result
+        return normalizeEagleApiPathToFileUrl(filePath)
       }
     }
 

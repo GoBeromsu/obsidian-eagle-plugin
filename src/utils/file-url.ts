@@ -1,4 +1,4 @@
-import type { App } from 'obsidian'
+import { Platform } from 'obsidian'
 
 const FILE_URL_PROTOCOL = 'file://'
 
@@ -94,31 +94,30 @@ export function normalizeEagleApiPathToFileUrl(rawPath: string): string {
  * cross-origin and blocked by the renderer. The app protocol handler serves
  * local files at app://<hash>/<absolute-path>, making it CSP-safe.
  *
- * Pass the hash from getObsidianAppHash(). If the hash is empty, returns
- * the original URL unchanged (safe fallback).
+ * Uses Platform.resourcePathPrefix (e.g. "app://<hash>/") to avoid
+ * computing the hash manually. Returns the original URL unchanged if the
+ * prefix is unavailable (safe fallback).
  *
  * Keep file:// URLs in stored markdown — only convert at render time.
  */
-export function fileUrlToDisplayUrl(url: string, appHash: string): string {
-  if (!url.startsWith('file://') || !appHash) return url
+export function fileUrlToDisplayUrl(url: string): string {
+  const prefix = Platform.resourcePathPrefix
+  if (!url.startsWith('file://') || !prefix) return url
   // file:///Users/foo/bar.jpg → app://<hash>/Users/foo/bar.jpg
   const path = url.replace(/^file:\/\//, '').replace(/^\//, '')
-  return `app://${appHash}/${path}`
+  return `${prefix}${path}`
 }
 
 /**
- * Extract the Obsidian app protocol hash used in app://<hash>/ resource URLs.
- * Returns empty string if the vault has no files yet.
+ * Convert a file:// URL back to an absolute OS filesystem path.
+ * Handles percent-encoding (including double-encoded paths from Eagle).
+ * On Windows, strips the leading slash before drive letters (/C:/... → C:/...).
  */
-export function getObsidianAppHash(app: App): string {
-  const files = app.vault.getFiles()
-  if (files.length === 0) return ''
-  try {
-    return new URL(app.vault.getResourcePath(files[0])).hostname
-  } catch (err) {
-    console.error('Eagle: failed to derive Obsidian app URL hash from resource path', err)
-    return ''
-  }
+export function fileUrlToOsPath(fileUrl: string): string {
+  const withoutProtocol = fileUrl.replace(/^file:\/\//, '')
+  const decoded = normalizeEncodedPath(withoutProtocol)
+  // Strip leading slash before Windows drive letter: /C:/Users/... → C:/Users/...
+  return decoded.replace(/^\/([A-Za-z]:)/, '$1')
 }
 
 export function resolveEagleThumbnailUrl(

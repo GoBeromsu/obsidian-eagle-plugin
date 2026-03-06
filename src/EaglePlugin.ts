@@ -584,6 +584,7 @@ export default class EaglePlugin extends Plugin {
       const { itemId, fileUrl, ext } = await this._eagleUploader.upload(normalizedFile, { folderName })
 
       if (cancelled) {
+        modal.close()
         new Notice('Upload cancelled — image was already sent to Eagle, please remove it manually.')
         this.handleFailedUpload(pasteId, '<!-- upload cancelled -->')
         return markdownImage
@@ -596,17 +597,17 @@ export default class EaglePlugin extends Plugin {
       }
       markdownImage = this.markdownImageFor(itemId, ext)
     } catch (e) {
-      if (!cancelled) {
-        if (e instanceof EagleApiError) {
-          this.handleFailedUpload(pasteId, `Eagle upload failed, API returned an error: ${e.message}`)
-        } else {
-          console.error('Failed upload request: ', e)
-          this.handleFailedUpload(pasteId, '⚠️Eagle upload failed, check dev console')
-        }
-      } else {
-        this.handleFailedUpload(pasteId, '<!-- upload cancelled -->')
-      }
       modal.close()
+      if (cancelled) {
+        this.handleFailedUpload(pasteId, '<!-- upload cancelled -->')
+        return markdownImage
+      }
+      if (e instanceof EagleApiError) {
+        this.handleFailedUpload(pasteId, `Eagle upload failed, API returned an error: ${e.message}`)
+      } else {
+        console.error('Failed upload request: ', e)
+        this.handleFailedUpload(pasteId, '⚠️Eagle upload failed, check dev console')
+      }
       throw e
     }
 

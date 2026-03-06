@@ -28,7 +28,11 @@ async function eagleCanvasPaste(
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
   const canvas: Canvas = this.canvas
 
-  await uploadImageOnCanvas(canvas, plugin, buildPasteEventCopy(e, files))
+  try {
+    await uploadImageOnCanvas(canvas, plugin, buildPasteEventCopy(e, files))
+  } catch {
+    await originalPasteHandler.call(this, e)
+  }
 }
 
 async function uploadImageOnCanvas(
@@ -51,6 +55,7 @@ async function uploadImageOnCanvas(
     const { fileUrl, itemId } = await plugin.eagleUploader.upload(file, { folderName })
 
     if (cancelled) {
+      modal.close()
       new Notice('Upload cancelled — image was already sent to Eagle, please remove it manually.')
       return
     }
@@ -59,9 +64,12 @@ async function uploadImageOnCanvas(
     modal.close()
     pasteRemoteImageToCanvas(canvas, itemId, fileUrl)
   } catch (err: unknown) {
-    if (cancelled) return
-    const message = err instanceof Error ? err.message : 'Upload failed'
-    modal.showError(message)
+    if (cancelled) {
+      modal.close()
+      return
+    }
+    modal.close()
+    throw err
   }
 }
 

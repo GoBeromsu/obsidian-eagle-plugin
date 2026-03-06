@@ -265,7 +265,10 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
           void this.plugin.saveSettings()
         })
       })
-    } catch {
+    } catch (err) {
+      if (!(err instanceof Error && err.message.includes('connect'))) {
+        console.error('Eagle: unexpected error while loading folder list', err)
+      }
       folderSetting.setDesc(
         'The folder name in Eagle where images will be saved. (Eagle not reachable — type folder name manually)',
       )

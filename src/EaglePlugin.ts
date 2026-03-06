@@ -469,7 +469,7 @@ export default class EaglePlugin extends Plugin {
 
   private static eagleItemIdFromAlt(alt: string) {
     // eslint-disable-next-line @typescript-eslint/prefer-regexp-exec
-    const match = alt.trim().match(/^eagle:([A-Za-z0-9]+)$/)
+    const match = alt.trim().match(/^eagle:([A-Za-z0-9]+)(?:\|\d+)?$/)
     return match ? match[1] : null
   }
 

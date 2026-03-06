@@ -1,6 +1,5 @@
-import { execSync } from 'child_process';
-import { readFileSync, writeFileSync } from 'fs';
 import { spawnSync } from 'child_process';
+import { readFileSync, writeFileSync } from 'fs';
 
 const version = process.env.npm_package_version;
 if (!version) throw new Error('npm_package_version is not set. Run via: pnpm version <semver>');

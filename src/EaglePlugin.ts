@@ -542,6 +542,7 @@ export default class EaglePlugin extends Plugin {
         void this.insertSelectedSearchItem(editor, item)
       },
       this._settings.debugSearchDiagnostics,
+      this._settings.searchDebounceMs,
     ).open()
   }
 
@@ -580,7 +581,7 @@ export default class EaglePlugin extends Plugin {
     let markdownImage = ''
     try {
       const folderName = this.resolveTargetEagleFolderForActiveFile()
-      const normalizedFile = await normalizeImageForUpload(file, this._settings)
+      const normalizedFile = await normalizeImageForUpload(file)
       const { itemId, fileUrl, ext } = await this._eagleUploader.upload(normalizedFile, { folderName })
 
       if (cancelled) {

@@ -167,4 +167,40 @@
 
 .eagle-folder-mapping-input {
   flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.eagle-folder-control {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+}
+
+/* ── Connection Status Badge ────────────────────────────────────────────── */
+
+.eagle-connection-status {
+  font-size: var(--font-ui-smaller);
+  margin-bottom: 8px;
+  color: var(--text-muted);
+}
+
+.eagle-connection-status.is-connected {
+  color: var(--text-success);
+}
+
+.eagle-connection-status.is-disconnected {
+  color: var(--text-error);
+}
+
+/* ── Eagle folder dropdown in mapping rows ──────────────────────────────── */
+
+select.eagle-folder-mapping-input {
+  background: var(--background-primary);
+  color: var(--text-normal);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  padding: 4px 8px;
+  font-size: var(--font-ui-small);
+  height: var(--input-height);
 }

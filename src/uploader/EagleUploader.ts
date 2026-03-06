@@ -29,7 +29,7 @@ interface EagleFolder {
   children?: EagleFolder[]
 }
 
-interface EagleFolderWithPath {
+export interface EagleFolderWithPath {
   id: string
   name: string
   /** Slash-separated full path from the library root (e.g. "Resources/Obsidian"). Equal to `name` for root-level folders. No leading or trailing slash. */
@@ -164,10 +164,19 @@ export default class EagleUploader {
       folderId = await this.ensureFolderExists(targetFolderName)
     }
 
-    const itemId = await this.addToEagle(tempFilePath, folderId)
+    let itemId: string
+    try {
+      itemId = await this.addToEagle(tempFilePath, folderId)
+    } finally {
+      const adapter = this.app.vault.adapter as any
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      adapter.fs.unlink(tempFilePath, () => {})
+    }
+
     await new Promise((resolve) => setTimeout(resolve, EAGLE_PROCESSING_DELAY_MS))
     const fileUrl = await this.getFileUrlForItemId(itemId)
-    const ext = (fileUrl.startsWith('file://') ? extractFileExtension(fileUrl) : '') || extractFileExtension(image.name) || 'jpg'
+    const extFromUrl = fileUrl.startsWith('file://') ? extractFileExtension(fileUrl) : ''
+    const ext = extFromUrl || extractFileExtension(image.name) || 'jpg'
     return { itemId, fileUrl, ext }
   }
 
@@ -417,6 +426,11 @@ export default class EagleUploader {
     return this.createFolder(name)
   }
 
+  async listFolders(): Promise<EagleFolderWithPath[]> {
+    const rawFolders = await this.listFoldersRaw()
+    return this.flattenFolderTree(rawFolders)
+  }
+
   async isConnected(): Promise<boolean> {
     try {
       await this.getLibraryRootPath()
@@ -494,11 +508,14 @@ export default class EagleUploader {
     }
 
     const maybeItems = data.data
-    const rawItems = Array.isArray(maybeItems)
-      ? maybeItems
-      : maybeItems && typeof maybeItems === 'object'
-        ? ((maybeItems as { items?: unknown }).items || (maybeItems as { data?: unknown }).data)
-        : []
+    let rawItems: unknown
+    if (Array.isArray(maybeItems)) {
+      rawItems = maybeItems
+    } else if (maybeItems && typeof maybeItems === 'object') {
+      rawItems = (maybeItems as { items?: unknown }).items || (maybeItems as { data?: unknown }).data
+    } else {
+      rawItems = []
+    }
 
     if (!Array.isArray(rawItems)) {
       throw new EagleApiError('Eagle API returned invalid item list payload')
@@ -512,11 +529,12 @@ export default class EagleUploader {
           return null
         }
 
-        const tags = Array.isArray(candidate.tags)
-          ? candidate.tags.filter((tag): tag is string => typeof tag === 'string')
-          : typeof candidate.tags === 'string'
-            ? candidate.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
-            : undefined
+        let tags: string[] | undefined
+        if (Array.isArray(candidate.tags)) {
+          tags = candidate.tags.filter((tag): tag is string => typeof tag === 'string')
+        } else if (typeof candidate.tags === 'string') {
+          tags = candidate.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
+        }
 
         return {
           id: candidate.id,

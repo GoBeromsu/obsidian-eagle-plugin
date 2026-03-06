@@ -1,4 +1,4 @@
-import { Canvas } from 'obsidian'
+import { Canvas, Notice } from 'obsidian'
 
 import EaglePlugin from './EaglePlugin'
 import ImageUploadBlockingModal from './ui/ImageUploadBlockingModal'
@@ -28,33 +28,41 @@ async function eagleCanvasPaste(
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
   const canvas: Canvas = this.canvas
 
-  try {
-    await uploadImageOnCanvas(canvas, plugin, buildPasteEventCopy(e, files))
-  } catch {
-    await originalPasteHandler.call(this, e)
-  }
+  await uploadImageOnCanvas(canvas, plugin, buildPasteEventCopy(e, files))
 }
 
-function uploadImageOnCanvas(canvas: Canvas, plugin: EaglePlugin, e: ClipboardEvent) {
+async function uploadImageOnCanvas(
+  canvas: Canvas,
+  plugin: EaglePlugin,
+  e: ClipboardEvent,
+): Promise<void> {
   const modal = new ImageUploadBlockingModal(plugin.app)
   modal.open()
 
-  const file = e.clipboardData.files[0]
-  const folderName = plugin.getTargetEagleFolderForActiveFile()
-  return plugin.eagleUploader
-    .upload(file, { folderName })
-    .then(({ fileUrl, itemId }) => {
-      if (!modal.isOpen) {
-        return
-      }
+  let cancelled = false
+  modal.onCancel = () => {
+    cancelled = true
+  }
 
-      modal.close()
-      pasteRemoteImageToCanvas(canvas, itemId, fileUrl)
-    })
-    .catch((err) => {
-      modal.close()
-      throw err
-    })
+  const file = e.clipboardData.files[0]
+  const folderName = plugin.resolveTargetEagleFolderForActiveFile()
+
+  try {
+    const { fileUrl, itemId } = await plugin.eagleUploader.upload(file, { folderName })
+
+    if (cancelled) {
+      new Notice('Upload cancelled — image was already sent to Eagle, please remove it manually.')
+      return
+    }
+    if (!modal.isOpen) return
+
+    modal.close()
+    pasteRemoteImageToCanvas(canvas, itemId, fileUrl)
+  } catch (err: unknown) {
+    if (cancelled) return
+    const message = err instanceof Error ? err.message : 'Upload failed'
+    modal.showError(message)
+  }
 }
 
 function pasteRemoteImageToCanvas(canvas: Canvas, itemId: string, imageUrl: string) {

@@ -63,7 +63,9 @@ export default class EagleSearchPickerModal extends Modal {
     })
 
     this.gridEl = contentEl.createEl('div', { cls: 'eagle-picker-grid' })
-    this.renderGrid()
+    this.gridEl.addEventListener('keydown', (e: KeyboardEvent) => {
+      this.handleGridArrowNav(e)
+    })
 
     this.keywordInput.inputEl.focus()
   }
@@ -130,6 +132,11 @@ export default class EagleSearchPickerModal extends Modal {
     this.setStatus('Searching…', 'loading')
     this.debugLog('search:start', { keyword, limit: SEARCH_RESULT_LIMIT, token })
 
+    this.gridEl.empty()
+    for (let i = 0; i < 6; i++) {
+      this.gridEl.createEl('div', { cls: 'eagle-skeleton-card' })
+    }
+
     try {
       const results = await this.uploader.searchItems({
         keyword,
@@ -178,16 +185,16 @@ export default class EagleSearchPickerModal extends Modal {
   }
 
   private inferThumbnailUrlType(rawThumbnail: string, resolvedUrl: string): 'api' | 'http' | 'file' | 'unknown' {
-    const rawCandidate = rawThumbnail.trim().toLowerCase()
-    if (/^\/?api\//.test(rawCandidate)) {
+    const raw = rawThumbnail.trim().toLowerCase()
+    if (raw.startsWith('api/') || raw.startsWith('/api/')) {
       return 'api'
     }
 
-    const resolvedCandidate = resolvedUrl.trim().toLowerCase()
-    if (resolvedCandidate.startsWith('file://')) {
+    const resolved = resolvedUrl.trim().toLowerCase()
+    if (resolved.startsWith('file://')) {
       return 'file'
     }
-    if (resolvedCandidate.startsWith('http://') || resolvedCandidate.startsWith('https://')) {
+    if (resolved.startsWith('http://') || resolved.startsWith('https://')) {
       return 'http'
     }
 
@@ -208,6 +215,28 @@ export default class EagleSearchPickerModal extends Modal {
     for (const item of this.results) {
       this.renderCard(item, token ?? this.activeSearchToken)
     }
+  }
+
+  private handleGridArrowNav(e: KeyboardEvent): void {
+    const cols = Math.max(1, Math.round(this.gridEl.offsetWidth / 150))
+    let delta: number
+    switch (e.key) {
+      case 'ArrowRight': delta = 1; break
+      case 'ArrowLeft': delta = -1; break
+      case 'ArrowDown': delta = cols; break
+      case 'ArrowUp': delta = -cols; break
+      default: return
+    }
+
+    const cards = Array.from(this.gridEl.querySelectorAll<HTMLElement>('.eagle-picker-item'))
+    const idx = cards.indexOf(document.activeElement as HTMLElement)
+    if (idx === -1) return
+
+    const next = cards[idx + delta]
+    if (!next) return
+
+    e.preventDefault()
+    next.focus()
   }
 
   private renderCard(item: EagleItemSearchResult, token: number): void {

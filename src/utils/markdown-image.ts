@@ -152,12 +152,12 @@ export function findEagleWikilinkTokens(markdown: string): WikilinkEmbedToken[] 
   const pattern = /!\[\[\.eagle\/([^.\]]+)\.([^\]]+)\]\]/g
 
   for (const match of markdown.matchAll(pattern)) {
-    if (isOffsetInRanges(match.index!, codeRanges)) continue
+    if (isOffsetInRanges(match.index, codeRanges)) continue
     tokens.push({
       itemId: match[1],
       ext: match[2],
-      start: match.index!,
-      end: match.index! + match[0].length,
+      start: match.index,
+      end: match.index + match[0].length,
     })
   }
 

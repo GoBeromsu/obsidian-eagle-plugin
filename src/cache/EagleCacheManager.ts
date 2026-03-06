@@ -19,7 +19,7 @@ export default class EagleCacheManager {
   }
 
   async ensureCacheFolder(): Promise<void> {
-    if (!this.ensureFolderPromise) {
+    if (this.ensureFolderPromise === null) {
       this.ensureFolderPromise = (async () => {
         const { adapter } = this.app.vault
         if (!(await adapter.exists(this.CACHE_FOLDER))) {

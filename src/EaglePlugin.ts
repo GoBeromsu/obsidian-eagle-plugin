@@ -10,6 +10,7 @@ import {
   TFile,
 } from 'obsidian'
 
+import EagleCacheManager from './cache/EagleCacheManager'
 import { createEagleCanvasPasteHandler } from './Canvas'
 import { DEFAULT_SETTINGS, EaglePluginSettings } from './plugin-settings'
 import EaglePluginSettingsTab from './ui/EaglePluginSettingsTab'
@@ -18,13 +19,12 @@ import InfoModal from './ui/InfoModal'
 import UpdateLinksConfirmationModal from './ui/UpdateLinksConfirmationModal'
 import EagleApiError from './uploader/EagleApiError'
 import EagleUploader, { type EagleItemSearchResult } from './uploader/EagleUploader'
-import EagleCacheManager from './cache/EagleCacheManager'
 import { findLocalFileUnderCursor, replaceFirstOccurrence } from './utils/editor'
+import { filePathToFileUrl, fileUrlToDisplayUrl, fileUrlToOsPath } from './utils/file-url'
 import { allFilesAreImages } from './utils/FileList'
 import { resolveMappedEagleFolder, sanitizeFolderMappings } from './utils/folder-mapping'
-import { findMarkdownImageTokens, findEagleWikilinkTokens, applyTextReplacements } from './utils/markdown-image'
-import { filePathToFileUrl, fileUrlToDisplayUrl, fileUrlToOsPath } from './utils/file-url'
 import { extractFileExtension } from './utils/image-format'
+import { applyTextReplacements, findEagleWikilinkTokens, findMarkdownImageTokens } from './utils/markdown-image'
 import { normalizeImageForUpload, removeReferenceIfPresent } from './utils/misc'
 import {
   filesAndLinksStatsFrom,
@@ -441,11 +441,13 @@ export default class EaglePlugin extends Plugin {
   }
 
   private static eagleItemIdFromAlt(alt: string) {
+    // eslint-disable-next-line @typescript-eslint/prefer-regexp-exec
     const match = alt.trim().match(/^eagle:([A-Za-z0-9]+)$/)
     return match ? match[1] : null
   }
 
   private static eagleItemIdFromLink(link: string) {
+    // eslint-disable-next-line @typescript-eslint/prefer-regexp-exec
     const match = link.match(/[\\/]+images[\\/]+([^\\/]+)\.info[\\/]+/i)
     return match ? match[1] : null
   }
@@ -599,6 +601,7 @@ export default class EaglePlugin extends Plugin {
     if (existingImg && existingImg.complete && existingImg.naturalWidth > 0) return
 
     const src = embed.getAttribute('src') ?? ''
+    // eslint-disable-next-line @typescript-eslint/prefer-regexp-exec
     const match = src.match(/^\.eagle\/([^.]+)\.(.+)$/)
     if (!match) return
     const [, itemId, ext] = match

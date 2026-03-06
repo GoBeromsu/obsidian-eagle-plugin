@@ -266,7 +266,7 @@ export default class EagleUploader {
       console.warn('Eagle: item/info response missing name/ext', { itemId, data: infoData.data })
     } else {
       const { name, ext } = infoData.data
-      const libraryRoot = this.settings.knownLibraryPath || await this.getLibraryRootPath()
+      const libraryRoot = await this.getLibraryRootPath()
       if (!libraryRoot) {
         console.warn('Eagle: cannot resolve library root — falling back to eagle:// URL', { itemId })
       } else {

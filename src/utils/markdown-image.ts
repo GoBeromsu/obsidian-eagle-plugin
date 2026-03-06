@@ -143,10 +143,33 @@ export interface WikilinkEmbedToken {
 }
 
 /**
- * Finds Eagle wikilink embed tokens of the form: ![[.eagle/ITEMID.EXT]]
+ * Finds Eagle wikilink embed tokens of the form: ![[CACHE_FOLDER/ITEMID.EXT]]
  * Skips fenced code blocks.
  */
-export function findEagleWikilinkTokens(markdown: string): WikilinkEmbedToken[] {
+export function findEagleWikilinkTokens(markdown: string, cacheFolder: string): WikilinkEmbedToken[] {
+  const tokens: WikilinkEmbedToken[] = []
+  const codeRanges = fencedCodeBlockRanges(markdown)
+  const escapedFolder = cacheFolder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const pattern = new RegExp(`!\\[\\[${escapedFolder}\\/([^.\\]]+)\\.([^\\]]+)\\]\\]`, 'g')
+
+  for (const match of markdown.matchAll(pattern)) {
+    if (isOffsetInRanges(match.index, codeRanges)) continue
+    tokens.push({
+      itemId: match[1],
+      ext: match[2],
+      start: match.index,
+      end: match.index + match[0].length,
+    })
+  }
+
+  return tokens
+}
+
+/**
+ * Finds Eagle wikilink embed tokens of the old dotfolder form: ![[.eagle/ITEMID.EXT]]
+ * Used for backward-compat migration. Skips fenced code blocks.
+ */
+export function findDotEagleWikilinkTokens(markdown: string): WikilinkEmbedToken[] {
   const tokens: WikilinkEmbedToken[] = []
   const codeRanges = fencedCodeBlockRanges(markdown)
   const pattern = /!\[\[\.eagle\/([^.\]]+)\.([^\]]+)\]\]/g

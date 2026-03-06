@@ -1,8 +1,8 @@
 import { App, Modal, TextComponent } from 'obsidian'
 
-import { fileUrlToDisplayUrl } from '../utils/file-url'
 import EagleApiError from '../uploader/EagleApiError'
 import EagleUploader, { EagleItemSearchResult } from '../uploader/EagleUploader'
+import { fileUrlToDisplayUrl } from '../utils/file-url'
 
 const SEARCH_DEBOUNCE_MS = 300
 const SEARCH_RESULT_LIMIT = 100

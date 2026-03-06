@@ -234,7 +234,7 @@ export default class EagleUploader {
     if (cached) return cached
 
     const inFlight = this.fileUrlInFlight.get(itemId)
-    if (inFlight) return inFlight
+    if (inFlight !== undefined) return inFlight
 
     const promise = this.fetchFileUrlForItemId(itemId)
       .then((url) => {

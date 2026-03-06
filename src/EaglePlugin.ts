@@ -520,7 +520,7 @@ export default class EaglePlugin extends Plugin {
           return
         }
 
-        img.addEventListener('error', recoverImage, { once: true })
+        img.addEventListener('error', () => { void recoverImage() }, { once: true })
       })
     })
   }

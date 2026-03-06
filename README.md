@@ -1,126 +1,160 @@
-# Eagle Plugin for Obsidian
+# Eagle Integration for Obsidian
 
-This plugin uploads images to [Eagle](https://eagle.cool/) instead of storing them locally in your vault.
+An Obsidian plugin that uploads images to [Eagle](https://eagle.cool/) instead of storing them locally in your vault. Images are embedded as Obsidian wikilinks pointing to a local cache folder, so they render offline while Eagle stays the source of truth for your assets.
 
 ## Why?
 
-Obsidian stores all the data locally by design
-(which is perfect for text and, in my opinion, can be improved for images).
-If you often add pictures to your notes, your vault can quickly grow in size.
-Which in turn can lead to reaching limits if you use free plans of cloud storage services to sync your notes
-or can lead to growth of repository size if you use git to back up your notes.
+Obsidian stores all data locally by design — great for text, but images can quickly bloat your vault. If you paste screenshots daily (e.g. lecture slides, design references), vault size grows fast, hitting cloud storage limits or inflating git repository size.
 
-This plugin is a perfect solution for people
-who paste images to their notes on daily basis (i.e. students making screenshots of lecture slides)
-and do not want to clutter their vaults with image files.
-
-Having images managed by Eagle also makes it easier to organize and search your images
-using Eagle's powerful tagging and categorization features.
+This plugin routes images to Eagle, which excels at organizing and searching visual assets with tags, folders, and annotations. Your vault stays lean; Eagle stays rich.
 
 ## Features
 
-- Upload images to Eagle automatically
-- Upload images by either pasting from the clipboard or by dragging them from the file system
-- Animated gifs upload support on drag-and-drop
-- Integration with Eagle's library management system
-- Search Eagle library from Obsidian command palette and insert selected images by title/metadata
+- **Paste & drop upload** — images pasted or dropped into a note are uploaded to Eagle and embedded immediately
+- **Canvas support** — paste uploads work inside Obsidian Canvas views
+- **Local cache** — images are copied from your Eagle library into a configurable vault folder (`eagle-cache/`) for offline rendering
+- **Library search** — search your Eagle library by keyword and insert images without leaving Obsidian
+- **Folder mapping** — route uploads to different Eagle folders based on the active note's Obsidian folder path
+- **Lazy cache sync** — missing cache files are backfilled automatically on startup and on tab switch
+- **Cache eviction** — cached files are removed when the corresponding Eagle item is deleted
+- **Migrate command** — batch-convert old-format `![eagle:ID](...)` links to the new wikilink format
+- **Backward compatibility** — old-format Eagle image links still render correctly
+
+## Prerequisites
+
+- [Eagle](https://eagle.cool/) installed and running
+- Eagle's local API enabled (default: `localhost:41595`)
 
 ## Installation
 
-Install the plugin via the [Community Plugins](https://help.obsidian.md/Advanced+topics/Third-party+plugins#Discover+and+install+community+plugins) tab within Obsidian
+Install via **Settings > Community plugins** and search for "Eagle Integration".
 
-## Getting started
+Or install manually:
 
-### Prerequisites
-
-1. Install and run [Eagle](https://eagle.cool/)
-2. Make sure Eagle is running on your system
-
-### Configuration
-
-Go to plugin settings and configure:
-
-- **Eagle API Host**: The host for your running Eagle instance (default: `localhost`)
-- **Eagle API Port**: The port for your running Eagle instance (default: `41595`)
-- **Eagle Folder Name**: (Optional) The folder name in Eagle where images will be saved. Leave empty to save to the default folder.
-- **Fallback format for unsupported images**: Convert unsupported formats (for example HEIC/HEIF) to this format during upload (`jpeg` / `png` / `webp`).
-- **JPEG conversion quality**: JPEG quality used when the fallback format is `jpeg` (`0`~`1`).
-
-## Search & import images from Eagle
-
-You can import images already in your Eagle library directly into the current note:
-
-1. Open the command palette and run **Eagle: Insert image from Eagle (search)**.
-2. Enter a keyword. The plugin searches Eagle item title/annotation/tags through the default API keyword search.
-3. Select the item from the list and it will insert:
-
-```
-![eagle:<itemId>](file://...)
+```bash
+cd <your-vault>/.obsidian/plugins
+git clone https://github.com/GoBeromsu/obsidian-eagle-plugin eagle-integration
+cd eagle-integration
+pnpm install && pnpm build
 ```
 
-The command works at the current cursor location. If only one image is found, it is inserted immediately.
+Reload Obsidian and enable the plugin under **Settings > Community plugins**.
 
-If the current absolute file path is not valid after moving machine/library, use:
+## Quick Start
 
-- `Eagle: Update embedded image paths (current note)`
-- `Eagle: Update embedded image paths (entire vault)`
+1. Open a note in Obsidian
+2. Make sure Eagle is running
+3. Paste or drag-and-drop an image into your note
 
-### Rendering policy for unsupported formats
+The plugin uploads the image to Eagle, caches a copy in your vault under `eagle-cache/`, and inserts a wikilink:
 
-When Obsidian cannot render an uploaded format directly, the plugin converts it on upload to your selected fallback format before inserting into Markdown.
-If conversion fails, the upload is treated as an error and shown through the existing upload error flow.
+```
+![[eagle-cache/LXXXXXXXXXXXXXXX.jpg]]
+```
 
-That's all! Now you are ready to make notes and upload all your images to Eagle.
+## Commands
 
-## Portability (library / machine moves)
+| Command | Description |
+|---------|-------------|
+| `Eagle: Upload to Eagle` | Upload the local image under the cursor to Eagle |
+| `Eagle: Insert image from Eagle (search)` | Search your Eagle library and insert an image at the cursor |
+| `Eagle: Migrate all images to eagle-cache` | Batch-migrate old-format Eagle links to wikilinks |
 
-This plugin embeds images as `file://` URLs so they render immediately in Obsidian. These links are **absolute paths**, so they can break if:
+Right-click a local image reference in the editor to access **Upload to Eagle** from the context menu.
 
-- Your Eagle library moves to a different folder/drive
-- You switch machines (different home directory)
-- You migrate across operating systems
+## Settings
 
-To keep links repairable, the plugin stores the Eagle item ID in the markdown alt text:
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Eagle API Host | `localhost` | Host of the running Eagle instance |
+| Eagle API Port | `41595` | Port of the running Eagle instance |
+| Eagle Folder Name | _(empty)_ | Default Eagle folder for uploads; leave empty for Eagle's root |
+| Cache folder name | `eagle-cache` | Vault folder where images are cached; supports subfolders (e.g. `80. References/Eagle`) |
+| Fallback image format | `jpeg` | Format used when uploading unsupported image types (HEIC, etc.) |
+| JPEG conversion quality | `0.9` | Quality for JPEG conversion (0–1) |
+| Search diagnostics | off | Log search/thumbnail resolution details to the developer console |
+
+### Folder Mapping
+
+Route uploads to different Eagle folders depending on which Obsidian folder the active note lives in. Add rules under **Settings > Eagle Plugin Settings > Folder Mapping**. The longest matching prefix wins.
+
+**Example:**
+
+| Obsidian Folder | Eagle Folder |
+|-----------------|--------------|
+| `Projects/Design` | `Design` |
+| `Projects` | `Projects` |
+
+A note at `Projects/Design/mockup.md` uploads to the `Design` Eagle folder.
+
+## Local Cache
+
+All embedded Eagle images are stored as wikilinks pointing to a local cache folder:
+
+```
+![[eagle-cache/LXXXXXXXXXXXXXXX.jpg]]
+```
+
+The cache folder is configurable and supports nested paths (e.g. `80. References/07. Eagle`). On startup and on tab switch, the plugin checks for missing cache files and backfills them from your Eagle library. If an Eagle item is deleted, its cached copy is evicted automatically.
+
+To rename the cache folder, update the **Cache folder name** setting and confirm when prompted — the plugin will move all cached files and update wikilinks across your vault.
+
+## Migrating from the Old Format
+
+Earlier versions embedded images as:
 
 ```markdown
-![eagle:<itemId>](file:///absolute/path/to/image.jpg)
+![eagle:LXXXXXXXXXXXXXXX](file:///absolute/path/to/image.jpg)
 ```
 
-If embedded images stop rendering after a move, run one of these commands:
+Run **Eagle: Migrate all images to eagle-cache** to convert all old-format links to the current wikilink format. The migration copies image files from your Eagle library into the cache folder.
 
-- `Eagle: Update embedded image paths (current note)`
-- `Eagle: Update embedded image paths (entire vault)`
+The old format also continues to render correctly via a backward-compatible post-processor.
 
 ## FAQ
 
-**Q:** How secure is this approach?  
-**A:** All images are stored locally in your Eagle library, which you control completely.
+**Q: How secure is this approach?**
+A: All images are stored locally in your Eagle library, which you control completely. No data leaves your machine.
 
-**Q:** Can I remove an image uploaded by accident?  
-**A:** Yes, you can manage all uploaded images through the Eagle application.
+**Q: Can I remove an image uploaded by accident?**
+A: Yes — delete it from Eagle directly. On the next tab switch, the plugin detects the deletion and removes the cache file.
 
-**Q:** Can it upload videos?  
-**A:** Currently, the plugin focuses on image uploads. Video support may be added in the future.
+**Q: Can it upload videos?**
+A: Currently the plugin focuses on image uploads.
 
-### Discussion
+**Q: Do images render if Eagle is not running?**
+A: Yes. Images are cached inside your vault and render as standard Obsidian wikilinks regardless of whether Eagle is running.
 
-If you have any questions/suggestions, consider using [GitHub Discussions](https://github.com/GoBeromsu/obsidian-eagle-plugin/discussions).
+## Known Limitations
 
-### Known limitations
+- Animated GIFs pasted from the clipboard are captured as static images by the OS. Use drag-and-drop to upload animated GIFs.
+- Eagle must be running for uploads and cache sync to work (rendering always works via local cache).
 
-- You cannot paste animated gifs from the clipboard (they initially get copied as static images to the clipboard).
-  Use drag and drop instead if you want to upload an animated gif.
-- Eagle must be running for the plugin to work.
+## Development
 
-### Contribution
+```bash
+pnpm install
+pnpm dev          # Watch mode (requires .hotreload file in vault)
+pnpm build        # Production build
+pnpm test         # Vitest unit tests
+pnpm lint         # ESLint
+pnpm lint:fix     # ESLint with auto-fix
+```
 
-Contributions are welcomed.
-Check out the [DEVELOPMENT.md](DEVELOPMENT.md) to get started with the code.
+Set `VAULT_NAME` in your environment to target a specific vault:
 
-### Your support
+```bash
+VAULT_NAME=MyVault pnpm verify
+```
 
-If this plugin is helpful to you, you can show your ❤️ by giving it a star ⭐️ on GitHub.
+## Contributing
 
-### Credits
+Contributions are welcome. Please open an issue or discussion before submitting large changes.
+
+If you have questions or suggestions, use [GitHub Discussions](https://github.com/GoBeromsu/obsidian-eagle-plugin/discussions).
+
+## Credits
 
 Originally forked from [gavvvr/obsidian-imgur-plugin](https://github.com/gavvvr/obsidian-imgur-plugin) and adapted for Eagle integration.
+
+If this plugin is helpful, consider giving it a star on GitHub.

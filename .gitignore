@@ -21,3 +21,7 @@ test-results.xml
 
 # env
 .env
+
+# Obsidian dev
+.hotreload
+data.json

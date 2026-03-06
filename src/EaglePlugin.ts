@@ -279,7 +279,7 @@ export default class EaglePlugin extends Plugin {
     const cacheFolderName = this._settings.cacheFolderName
 
     // Phase 1: Scan all files for old-format and .eagle/ tokens in parallel
-    type OldCandidate = { token: ReturnType<typeof findMarkdownImageTokens>[number]; itemId: string }
+    interface OldCandidate { token: ReturnType<typeof findMarkdownImageTokens>[number]; itemId: string }
     const oldFormatByFile = new Map<string, { file: TFile; content: string; candidates: OldCandidate[] }>()
     const dotEagleByFile = new Map<string, { file: TFile; content: string; candidates: ReturnType<typeof findDotEagleWikilinkTokens> }>()
     const itemIds = new Set<string>()
@@ -384,8 +384,8 @@ export default class EaglePlugin extends Plugin {
     for (const filePath of allPaths) {
       const oldEntry = oldFormatByFile.get(filePath)
       const dotEagleEntry = dotEagleByFile.get(filePath)
-      const file = (oldEntry ?? dotEagleEntry)!.file
-      const content = (oldEntry ?? dotEagleEntry)!.content
+      const file = (oldEntry ?? dotEagleEntry).file
+      const content = (oldEntry ?? dotEagleEntry).content
 
       const replacements: { start: number; end: number; text: string }[] = []
 
@@ -735,7 +735,7 @@ export default class EaglePlugin extends Plugin {
       await this._cacheManager.ensureCacheFolder()
       await Promise.allSettled(
         listed.files.map(async (srcPath) => {
-          const fileName = srcPath.split('/').pop()!
+          const fileName = srcPath.split('/').pop()
           const destPath = `${newFolder}/${fileName}`
           try {
             await this.app.vault.adapter.rename(srcPath, destPath)

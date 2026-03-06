@@ -1,6 +1,7 @@
 import { App, Modal, TextComponent } from 'obsidian'
 
 import { fileUrlToDisplayUrl, getObsidianAppHash } from '../utils/file-url'
+import EagleApiError from '../uploader/EagleApiError'
 import EagleUploader, { EagleItemSearchResult } from '../uploader/EagleUploader'
 
 const SEARCH_DEBOUNCE_MS = 300
@@ -164,6 +165,9 @@ export default class EagleSearchPickerModal extends Modal {
 
       const message = error instanceof Error ? error.message : String(error)
       this.debugLog('search:error', { token, keyword, message })
+      if (!(error instanceof EagleApiError)) {
+        console.error('Eagle: unexpected search error', { keyword, error })
+      }
       this.results = []
       this.thumbFallbackMap.clear()
       this.renderGrid()
@@ -319,11 +323,10 @@ export default class EagleSearchPickerModal extends Modal {
               })
             } catch (error) {
               const message = error instanceof Error ? error.message : String(error)
-              this.debugLog('thumbnail:fallback:error', {
-                token,
-                itemId: item.id,
-                message,
-              })
+              this.debugLog('thumbnail:fallback:error', { token, itemId: item.id, message })
+              if (!(error instanceof EagleApiError)) {
+                console.error('Eagle: unexpected thumbnail load failure', { itemId: item.id, error })
+              }
             }
           }
         }

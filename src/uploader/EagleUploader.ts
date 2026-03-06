@@ -238,10 +238,16 @@ export default class EagleUploader {
     const infoUrl = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.ITEM_INFO}?id=${itemId}`
     const infoData = await this.requestJson<{ status: string; data?: { name?: string; ext?: string } }>(infoUrl, 'GET')
 
-    if (infoData?.status === 'success' && infoData.data?.name && infoData.data?.ext) {
+    if (infoData?.status !== 'success') {
+      console.warn('Eagle: item/info returned non-success', { itemId, status: infoData?.status })
+    } else if (!infoData.data?.name || !infoData.data?.ext) {
+      console.warn('Eagle: item/info response missing name/ext', { itemId, data: infoData.data })
+    } else {
       const { name, ext } = infoData.data
       const libraryRoot = this.settings.knownLibraryPath || await this.getLibraryRootPath()
-      if (libraryRoot) {
+      if (!libraryRoot) {
+        console.warn('Eagle: cannot resolve library root — falling back to eagle:// URL', { itemId })
+      } else {
         const filePath = `${libraryRoot}/images/${itemId}.info/${name}.${ext}`
         const result = normalizeEagleApiPathToFileUrl(filePath)
         this.fileUrlCache.set(itemId, result)

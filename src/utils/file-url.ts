@@ -115,7 +115,8 @@ export function getObsidianAppHash(app: App): string {
   if (files.length === 0) return ''
   try {
     return new URL(app.vault.getResourcePath(files[0])).hostname
-  } catch {
+  } catch (err) {
+    console.error('Eagle: failed to derive Obsidian app URL hash from resource path', err)
     return ''
   }
 }

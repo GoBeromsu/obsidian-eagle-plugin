@@ -431,8 +431,10 @@ export default class EaglePlugin extends Plugin {
         const recoverImage = () => {
           this.eagleUploader.getFileUrlForItemId(itemId).then((url) => {
             if (url.startsWith('file://')) img.src = fileUrlToDisplayUrl(url, this.appUrlHash)
-          }).catch(() => {
-            // Eagle app not running — ignore
+          }).catch((err) => {
+            if (!(err instanceof EagleApiError)) {
+              console.error('Eagle: unexpected error during image recovery', { itemId, err })
+            }
           })
         }
 
@@ -462,11 +464,12 @@ export default class EaglePlugin extends Plugin {
       if (knownRoot !== currentRoot) {
         this.settings.knownLibraryPath = currentRoot
         await this.saveSettings()
-        new Notice('Eagle: 라이브러리 경로 변경 감지. 이미지 경로 업데이트 중...', 5000)
+        new Notice('Eagle: Library path changed. Updating embedded image paths…', 5000)
         await this.updateEagleImagePathsInFiles(this.app.vault.getMarkdownFiles())
       }
-    } catch {
-      // Eagle not running or API error — ignore silently
+    } catch (err) {
+      if (err instanceof EagleApiError) return // Eagle not running — expected
+      console.error('Eagle: checkLibraryPathDrift failed unexpectedly', err)
     }
   }
 

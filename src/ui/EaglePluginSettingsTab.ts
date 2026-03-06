@@ -65,6 +65,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.debugSearchDiagnostics)
           .onChange((value) => {
             this.plugin.settings.debugSearchDiagnostics = value
+            void this.plugin.saveSettings()
           }),
       )
 

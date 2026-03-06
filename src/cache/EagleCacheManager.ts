@@ -19,6 +19,7 @@ export default class EagleCacheManager {
     return this.app.vault.adapter.exists(this.cachedVaultPath(itemId, ext))
   }
 
+  /** Removes the cached file for the given item. No-op if the file does not exist. */
   async removeCache(itemId: string, ext: string): Promise<void> {
     if (await this.isCached(itemId, ext)) {
       await this.app.vault.adapter.remove(this.cachedVaultPath(itemId, ext))

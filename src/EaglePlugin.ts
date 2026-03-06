@@ -48,7 +48,7 @@ interface LocalImageInEditor {
   noteFile: TFile
 }
 
-interface OldFormatCandidate {
+interface OldFormatMatch {
   token: ReturnType<typeof findMarkdownImageTokens>[number]
   itemId: string
 }
@@ -67,6 +67,8 @@ export default class EaglePlugin extends Plugin {
   }
 
   private _cacheManager: EagleCacheManager
+  private _syncDebounceTimer: ReturnType<typeof setTimeout> | null = null
+  private _lastSyncedFilePath: string | null = null
 
   private customPasteEventCallback = (e: ClipboardEvent) => {
     const { files } = e.clipboardData
@@ -247,12 +249,21 @@ export default class EaglePlugin extends Plugin {
 
         const file = (view as any).file
         if (file instanceof TFile && file.extension === 'md') {
-          void this.syncCacheForFile(file).catch((err) => {
-            console.error('Eagle: syncCacheForFile failed', err)
-          })
+          if (this._syncDebounceTimer !== null) clearTimeout(this._syncDebounceTimer)
+          this._syncDebounceTimer = setTimeout(() => {
+            this._syncDebounceTimer = null
+            if (file.path === this._lastSyncedFilePath) return
+            this._lastSyncedFilePath = file.path
+            void this.syncCacheForFile(file).catch((err) => {
+              console.error('Eagle: syncCacheForFile failed', { path: file.path, err })
+            })
+          }, 500)
         }
       }),
     )
+    this.register(() => {
+      if (this._syncDebounceTimer !== null) clearTimeout(this._syncDebounceTimer)
+    })
 
     this.registerEvent(this.app.workspace.on('editor-menu', this.eaglePluginRightClickHandler))
   }
@@ -292,7 +303,7 @@ export default class EaglePlugin extends Plugin {
     const cacheFolderName = this._settings.cacheFolderName
 
     // Phase 1: Scan all files for old-format tokens in parallel
-    const oldFormatByFile = new Map<string, { file: TFile; content: string; candidates: OldFormatCandidate[] }>()
+    const oldFormatByFile = new Map<string, { file: TFile; content: string; candidates: OldFormatMatch[] }>()
     const itemIds = new Set<string>()
 
     const fileResults = await Promise.all(
@@ -300,7 +311,7 @@ export default class EaglePlugin extends Plugin {
         const content = await this.app.vault.read(file)
         const oldCandidates = findMarkdownImageTokens(content)
           .map((token) => ({ token, itemId: EaglePlugin.eagleItemIdFromAlt(token.alt) }))
-          .filter((c): c is OldFormatCandidate => c.itemId !== null)
+          .filter((c): c is OldFormatMatch => c.itemId !== null)
         return { file, content, oldCandidates }
       }),
     )
@@ -337,7 +348,7 @@ export default class EaglePlugin extends Plugin {
       }),
     )
 
-    // Phase 3: Cache files to cacheFolderName
+    // Phase 3: Copy image files from Eagle library into the vault cache folder
     const successExt = new Map<string, string>()
 
     await Promise.allSettled(
@@ -431,35 +442,46 @@ export default class EaglePlugin extends Plugin {
   }
 
   private async syncCacheForFile(file: TFile): Promise<void> {
-    if (!(await this._eagleUploader.isConnected())) return
-
     const content = await this.app.vault.read(file)
     const tokens = findEagleWikilinkTokens(content, this._cacheManager.cacheFolder)
     if (tokens.length === 0) return
 
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       tokens.map(async ({ itemId, ext }) => {
         const isCached = await this._cacheManager.isCached(itemId, ext)
         const exists = await this._eagleUploader.itemExists(itemId)
 
-        if (!exists && isCached) {
-          // Item deleted from Eagle — evict from cache
+        if (exists === null) return // Eagle unreachable or error — skip to avoid data loss
+
+        if (exists === false && isCached) {
+          // Item confirmed deleted from Eagle — evict from cache
+          console.log('Eagle: evicting deleted item from cache', { itemId, file: file.path })
           await this._cacheManager.removeCache(itemId, ext)
-        } else if (exists && !isCached) {
-          // Cache miss — backfill
+        } else if (exists === true && !isCached) {
+          // Cache file absent but item exists (cache cleared, synced from another device) — backfill
           try {
             const fileUrl = await this._eagleUploader.getFileUrlForItemId(itemId)
-            if (fileUrl.startsWith('file://')) {
-              await this._cacheManager.cacheFromOsPath(itemId, ext, fileUrlToOsPath(fileUrl))
+            if (!fileUrl.startsWith('file://')) {
+              console.debug('Eagle: syncCacheForFile backfill skipped — non-local URL', { itemId, fileUrl })
+              return
             }
+            await this._cacheManager.cacheFromOsPath(itemId, ext, fileUrlToOsPath(fileUrl))
           } catch (err) {
-            if (!(err instanceof EagleApiError)) {
-              console.warn('Eagle: syncCacheForFile backfill failed', { itemId, err })
+            if (err instanceof EagleApiError) {
+              console.debug('Eagle: syncCacheForFile backfill skipped — Eagle API error', { itemId })
+              return
             }
+            console.warn('Eagle: syncCacheForFile backfill failed', { itemId, err })
           }
         }
       }),
     )
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error('Eagle: syncCacheForFile token processing failed', result.reason)
+      }
+    }
   }
 
   private static eagleItemIdFromAlt(alt: string) {

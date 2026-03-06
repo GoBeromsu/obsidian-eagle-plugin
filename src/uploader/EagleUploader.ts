@@ -32,6 +32,7 @@ interface EagleFolder {
 interface EagleFolderWithPath {
   id: string
   name: string
+  /** Slash-separated full path from the library root (e.g. "Resources/Obsidian"). Equal to `name` for root-level folders. No leading or trailing slash. */
   path: string
 }
 
@@ -400,14 +401,19 @@ export default class EagleUploader {
     const rawFolders = await this.listFoldersRaw()
     const flat = this.flattenFolderTree(rawFolders)
 
-    // 1. Match by full path (handles "Resources/Obsidian" → truly nested)
+    // Match strategy:
+    // 1. Full path — slash-separated input like "Resources/Obsidian" maps to a truly nested folder.
+    // 2. Root name — simple input like "Obsidian" maps to a top-level folder (no parent).
+    // Falls through to create a new root-level folder if neither matches.
     const byPath = flat.find((f) => f.path === name)
     if (byPath) return byPath.id
 
-    // 2. Fall back to root-level name match
     const byName = flat.find((f) => f.name === name && !f.path.includes('/'))
     if (byName) return byName.id
 
+    if (name.includes('/')) {
+      console.warn('Eagle: nested folder path not found in library; creating root folder with literal name', { name })
+    }
     return this.createFolder(name)
   }
 
@@ -415,19 +421,26 @@ export default class EagleUploader {
     try {
       await this.getLibraryRootPath()
       return true
-    } catch {
+    } catch (err) {
+      console.debug('Eagle: isConnected check failed', err)
       return false
     }
   }
 
-  async itemExists(itemId: string): Promise<boolean> {
+  /**
+   * Returns `true` if the item exists and is not deleted, `false` if confirmed absent,
+   * or `null` if the check failed (Eagle unreachable, network error, server error).
+   * Callers must NOT evict cached files when this returns `null`.
+   */
+  async itemExists(itemId: string): Promise<boolean | null> {
     try {
       const { eagleHost, eaglePort } = this.settings
       const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.ITEM_INFO}?id=${itemId}`
       const data = await this.requestJson<{ status: string; data?: { isDeleted?: boolean } }>(url, 'GET')
       return data.status === 'success' && !data.data?.isDeleted
-    } catch {
-      return false
+    } catch (err) {
+      console.debug('Eagle: itemExists check failed — treating as uncertain', { itemId, err })
+      return null
     }
   }
 

@@ -12,7 +12,7 @@
     "ci": "pnpm run build && pnpm run lint && pnpm run test",
     "test": "vitest run",
     "test:ui": "vitest --ui",
-    "verify": "pnpm run build && obsidian plugin:reload id=obsidian-eagle-plugin && node scripts/verify-plugin.mjs",
+    "verify": "pnpm run build && VAULT_NAME=${VAULT_NAME:-Test} obsidian vault=\"$VAULT_NAME\" plugin:reload id=obsidian-eagle-plugin && node scripts/verify-plugin.mjs --vault \"$VAULT_NAME\" \"$@\"",
     "e2e": "wdio run test/e2e/wdio.conf.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"

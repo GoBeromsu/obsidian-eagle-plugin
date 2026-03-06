@@ -22,6 +22,7 @@ import { findLocalFileUnderCursor, replaceFirstOccurrence } from './utils/editor
 import { allFilesAreImages } from './utils/FileList'
 import { resolveMappedEagleFolder, sanitizeFolderMappings } from './utils/folder-mapping'
 import { findMarkdownImageTokens } from './utils/markdown-image'
+import { fileUrlToDisplayUrl, getObsidianAppHash } from './utils/file-url'
 import { normalizeImageForUpload, removeReferenceIfPresent } from './utils/misc'
 import {
   filesAndLinksStatsFrom,
@@ -47,6 +48,14 @@ interface LocalImageInEditor {
 
 export default class EaglePlugin extends Plugin {
   _settings: EaglePluginSettings
+  private _appUrlHash: string | null = null
+
+  private get appUrlHash(): string {
+    if (this._appUrlHash === null) {
+      this._appUrlHash = getObsidianAppHash(this.app)
+    }
+    return this._appUrlHash
+  }
 
   get settings() {
     return this._settings
@@ -212,6 +221,8 @@ export default class EaglePlugin extends Plugin {
     this.addUploadLocalCommand()
     this.addImportFromEagleLibraryCommand()
     this.addUpdateEmbeddedImagePathsCommands()
+    this.registerEagleImageRenderer()
+    void this.checkLibraryPathDrift()
   }
 
   setupEagleUploader(): void {
@@ -407,6 +418,56 @@ export default class EaglePlugin extends Plugin {
     }
 
     new Notice(summaryParts.join(' '))
+  }
+
+  private registerEagleImageRenderer(): void {
+    this.registerMarkdownPostProcessor((el) => {
+      el.querySelectorAll<HTMLImageElement>('img').forEach((img) => {
+        const itemId =
+          EaglePlugin.eagleItemIdFromAlt(img.alt) ??
+          EaglePlugin.eagleItemIdFromLink(img.getAttribute('src') ?? img.src)
+        if (!itemId) return
+
+        const recoverImage = () => {
+          this.eagleUploader.getFileUrlForItemId(itemId).then((url) => {
+            if (url.startsWith('file://')) img.src = fileUrlToDisplayUrl(url, this.appUrlHash)
+          }).catch(() => {
+            // Eagle app not running — ignore
+          })
+        }
+
+        // Image already failed before this handler was registered
+        if (img.complete && img.naturalWidth === 0 && img.src) {
+          recoverImage()
+          return
+        }
+
+        img.addEventListener('error', recoverImage, { once: true })
+      })
+    })
+  }
+
+  private async checkLibraryPathDrift(): Promise<void> {
+    try {
+      const currentRoot = await this.eagleUploader.getLibraryRootPath()
+      if (!currentRoot) return
+
+      const knownRoot = this.settings.knownLibraryPath
+      if (!knownRoot) {
+        this.settings.knownLibraryPath = currentRoot
+        await this.saveSettings()
+        return
+      }
+
+      if (knownRoot !== currentRoot) {
+        this.settings.knownLibraryPath = currentRoot
+        await this.saveSettings()
+        new Notice('Eagle: 라이브러리 경로 변경 감지. 이미지 경로 업데이트 중...', 5000)
+        await this.updateEagleImagePathsInFiles(this.app.vault.getMarkdownFiles())
+      }
+    } catch {
+      // Eagle not running or API error — ignore silently
+    }
   }
 
   private editorCheckCallbackForLocalUpload = (

@@ -13,6 +13,7 @@ export interface EaglePluginSettings {
   debugSearchDiagnostics: boolean
   fallbackImageFormat: FallbackImageFormat
   conversionQualityForJpeg: number
+  knownLibraryPath: string
 }
 
 export const DEFAULT_SETTINGS: EaglePluginSettings = {
@@ -23,4 +24,5 @@ export const DEFAULT_SETTINGS: EaglePluginSettings = {
   debugSearchDiagnostics: false,
   fallbackImageFormat: 'jpeg',
   conversionQualityForJpeg: 0.9,
+  knownLibraryPath: '',
 }

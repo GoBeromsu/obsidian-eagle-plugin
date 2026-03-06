@@ -1,3 +1,5 @@
+import type { App } from 'obsidian'
+
 const FILE_URL_PROTOCOL = 'file://'
 
 function safeDecodePath(path: string): string | null {
@@ -83,6 +85,39 @@ export function normalizeEagleApiPathToFileUrl(rawPath: string): string {
 
   const decoded = normalizeEncodedPath(candidate)
   return filePathToFileUrl(decoded)
+}
+
+/**
+ * Convert a file:// URL to an Obsidian app:// URL safe for img.src.
+ *
+ * Obsidian renders notes in an app://<hash>/ origin. file:// URLs are
+ * cross-origin and blocked by the renderer. The app protocol handler serves
+ * local files at app://<hash>/<absolute-path>, making it CSP-safe.
+ *
+ * Pass the hash from getObsidianAppHash(). If the hash is empty, returns
+ * the original URL unchanged (safe fallback).
+ *
+ * Keep file:// URLs in stored markdown — only convert at render time.
+ */
+export function fileUrlToDisplayUrl(url: string, appHash: string): string {
+  if (!url.startsWith('file://') || !appHash) return url
+  // file:///Users/foo/bar.jpg → app://<hash>/Users/foo/bar.jpg
+  const path = url.replace(/^file:\/\//, '').replace(/^\//, '')
+  return `app://${appHash}/${path}`
+}
+
+/**
+ * Extract the Obsidian app protocol hash used in app://<hash>/ resource URLs.
+ * Returns empty string if the vault has no files yet.
+ */
+export function getObsidianAppHash(app: App): string {
+  const files = app.vault.getFiles()
+  if (files.length === 0) return ''
+  try {
+    return new URL(app.vault.getResourcePath(files[0])).hostname
+  } catch {
+    return ''
+  }
 }
 
 export function resolveEagleThumbnailUrl(

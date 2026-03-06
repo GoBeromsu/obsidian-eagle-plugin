@@ -1,5 +1,6 @@
 import { App, Modal, TextComponent } from 'obsidian'
 
+import { fileUrlToDisplayUrl, getObsidianAppHash } from '../utils/file-url'
 import EagleUploader, { EagleItemSearchResult } from '../uploader/EagleUploader'
 
 const SEARCH_DEBOUNCE_MS = 300
@@ -12,6 +13,7 @@ export default class EagleSearchPickerModal extends Modal {
   private readonly uploader: EagleUploader
   private readonly onChoose: (item: EagleItemSearchResult) => void
   private readonly debugSearchDiagnostics: boolean
+  private readonly appUrlHash: string
 
   private keywordInput: TextComponent
   private statusEl: HTMLElement
@@ -32,6 +34,7 @@ export default class EagleSearchPickerModal extends Modal {
     this.uploader = uploader
     this.onChoose = onChoose
     this.debugSearchDiagnostics = debugSearchDiagnostics
+    this.appUrlHash = getObsidianAppHash(app)
     this.setTitle('Search Eagle library')
   }
 
@@ -224,7 +227,7 @@ export default class EagleSearchPickerModal extends Modal {
 
       const img = thumbWrapper.createEl('img', {
         cls: 'eagle-picker-img',
-        attr: { src: resolvedUrl, loading: 'lazy', alt: item.name || item.id },
+        attr: { src: fileUrlToDisplayUrl(resolvedUrl, this.appUrlHash), loading: 'lazy', alt: item.name || item.id },
       })
       img.addEventListener('error', () => {
         this.debugLog('thumbnail:metadata:error', {
@@ -305,7 +308,7 @@ export default class EagleSearchPickerModal extends Modal {
               thumbWrapper.empty()
               thumbWrapper.createEl('img', {
                 cls: 'eagle-picker-img',
-                attr: { src: thumbnailUrl, loading: 'lazy', alt: item.name || item.id },
+                attr: { src: fileUrlToDisplayUrl(thumbnailUrl, this.appUrlHash), loading: 'lazy', alt: item.name || item.id },
               })
               this.thumbFallbackMap.delete(item.id)
               this.debugLog('thumbnail:fallback:ok', {

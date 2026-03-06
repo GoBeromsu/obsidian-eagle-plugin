@@ -13,11 +13,12 @@ const EAGLE_API_ENDPOINTS = {
   FOLDER_LIST: '/api/folder/list',
   FOLDER_CREATE: '/api/folder/create',
   ITEM_LIST: '/api/item/list',
+  ITEM_INFO: '/api/item/info',
+  LIBRARY_INFO: '/api/library/info',
 } as const
 
 const EAGLE_PROCESSING_DELAY_MS = 300
 const EAGLE_URL_PROTOCOL = 'eagle://item/'
-const THUMBNAIL_SUFFIX_PATTERN = /_thumbnail(\.[^.]+)$/
 const CONNECTION_ERROR_HINT =
   'Cannot connect to Eagle. Make sure Eagle is running and API host/port are correct.'
 
@@ -79,6 +80,7 @@ export default class EagleUploader {
   private readonly settings: EaglePluginSettings
   private folderIdCache: Map<string, string> = new Map<string, string>()
   private folderIdInFlight: Map<string, Promise<string>> = new Map<string, Promise<string>>()
+  private readonly fileUrlCache = new Map<string, string>()
 
   constructor(app: App, settings: EaglePluginSettings) {
     this.app = app
@@ -224,18 +226,37 @@ export default class EagleUploader {
   }
 
   async getFileUrlForItemId(itemId: string): Promise<string> {
+    const cached = this.fileUrlCache.get(itemId)
+    if (cached) return cached
+
     const { eagleHost, eaglePort } = this.settings
-    const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.THUMBNAIL}?id=${itemId}`
 
-    const data = await this.requestJson<EagleListResponse>(url, 'GET')
+    // Use item info to get exact name + extension.
+    // The thumbnail endpoint always returns .png thumbnails regardless of the original
+    // file format, so deriving the original path from the thumbnail path gives the wrong
+    // extension for non-PNG originals (e.g. .jpg files would resolve as .png).
+    const infoUrl = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.ITEM_INFO}?id=${itemId}`
+    const infoData = await this.requestJson<{ status: string; data?: { name?: string; ext?: string } }>(infoUrl, 'GET')
 
-    if (data?.status === 'success' && typeof data?.data === 'string') {
-      const thumbnailPath = data.data
-      const originalPath = thumbnailPath.replace(THUMBNAIL_SUFFIX_PATTERN, '$1')
-      return normalizeEagleApiPathToFileUrl(originalPath)
+    if (infoData?.status === 'success' && infoData.data?.name && infoData.data?.ext) {
+      const { name, ext } = infoData.data
+      const libraryRoot = this.settings.knownLibraryPath || await this.getLibraryRootPath()
+      if (libraryRoot) {
+        const filePath = `${libraryRoot}/images/${itemId}.info/${name}.${ext}`
+        const result = normalizeEagleApiPathToFileUrl(filePath)
+        this.fileUrlCache.set(itemId, result)
+        return result
+      }
     }
 
     return `${EAGLE_URL_PROTOCOL}${itemId}`
+  }
+
+  async getLibraryRootPath(): Promise<string | null> {
+    const { eagleHost, eaglePort } = this.settings
+    const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.LIBRARY_INFO}`
+    const data = await this.requestJson<{ status: string; data?: { library?: { path?: string } } }>(url, 'GET')
+    return data?.data?.library?.path ?? null
   }
 
   /**

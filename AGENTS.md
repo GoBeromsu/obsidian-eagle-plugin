@@ -6,4 +6,4 @@ This file provides guidance for Claude Code when working with this repository.
 - eagle api: https://api.eagle.cool/
 
 # Release
-- Run `pnpm version patch|minor|major` on `main` — this bumps version, updates `manifest.json`/`versions.json`, commits, and pushes a tag. The CI `release.yml` workflow triggers on the tag and publishes the GitHub Release automatically.
+- `pnpm version patch|minor|major` on `main` → bumps version, pushes tag → CI publishes GitHub Release.

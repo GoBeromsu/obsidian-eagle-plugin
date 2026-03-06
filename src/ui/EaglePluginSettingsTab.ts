@@ -7,7 +7,7 @@ import RenameCacheModal from './RenameCacheModal'
 
 export default class EaglePluginSettingsTab extends PluginSettingTab {
   plugin: EaglePlugin
-  private originalCacheFolderName: string = ''
+  private originalCacheFolderName = ''
 
   constructor(app: App, plugin: EaglePlugin) {
     super(app, plugin)

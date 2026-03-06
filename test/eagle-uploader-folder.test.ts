@@ -89,6 +89,7 @@ describe(EagleUploader.name, () => {
     expect(result).toEqual({
       itemId: 'item-1',
       fileUrl: 'file:///Users/me/test.png',
+      ext: 'png',
     })
 
     vi.useRealTimers()

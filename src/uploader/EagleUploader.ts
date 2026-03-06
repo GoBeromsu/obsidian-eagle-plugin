@@ -13,11 +13,12 @@ const EAGLE_API_ENDPOINTS = {
   FOLDER_LIST: '/api/folder/list',
   FOLDER_CREATE: '/api/folder/create',
   ITEM_LIST: '/api/item/list',
+  ITEM_INFO: '/api/item/info',
+  LIBRARY_INFO: '/api/library/info',
 } as const
 
 const EAGLE_PROCESSING_DELAY_MS = 300
 const EAGLE_URL_PROTOCOL = 'eagle://item/'
-const THUMBNAIL_SUFFIX_PATTERN = /_thumbnail(\.[^.]+)$/
 const CONNECTION_ERROR_HINT =
   'Cannot connect to Eagle. Make sure Eagle is running and API host/port are correct.'
 
@@ -59,11 +60,27 @@ interface EagleListResponse {
   data?: unknown
 }
 
+interface EagleRawItemCandidate extends Partial<EagleItemSearchResult> {
+  id?: string
+  name?: string
+  ext?: string
+  tags?: string | string[]
+  annotation?: string
+  isDeleted?: boolean
+  filePath?: string
+  thumbnail?: string
+  thumb?: string
+  thumbnailPath?: string
+  preview?: string
+  previewPath?: string
+}
+
 export default class EagleUploader {
   private readonly app: App
   private readonly settings: EaglePluginSettings
   private folderIdCache: Map<string, string> = new Map<string, string>()
   private folderIdInFlight: Map<string, Promise<string>> = new Map<string, Promise<string>>()
+  private readonly fileUrlCache = new Map<string, string>()
 
   constructor(app: App, settings: EaglePluginSettings) {
     this.app = app
@@ -209,18 +226,43 @@ export default class EagleUploader {
   }
 
   async getFileUrlForItemId(itemId: string): Promise<string> {
+    const cached = this.fileUrlCache.get(itemId)
+    if (cached) return cached
+
     const { eagleHost, eaglePort } = this.settings
-    const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.THUMBNAIL}?id=${itemId}`
 
-    const data = await this.requestJson<EagleListResponse>(url, 'GET')
+    // Use item info to get exact name + extension.
+    // The thumbnail endpoint always returns .png thumbnails regardless of the original
+    // file format, so deriving the original path from the thumbnail path gives the wrong
+    // extension for non-PNG originals (e.g. .jpg files would resolve as .png).
+    const infoUrl = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.ITEM_INFO}?id=${itemId}`
+    const infoData = await this.requestJson<{ status: string; data?: { name?: string; ext?: string } }>(infoUrl, 'GET')
 
-    if (data?.status === 'success' && typeof data?.data === 'string') {
-      const thumbnailPath = data.data
-      const originalPath = thumbnailPath.replace(THUMBNAIL_SUFFIX_PATTERN, '$1')
-      return normalizeEagleApiPathToFileUrl(originalPath)
+    if (infoData?.status !== 'success') {
+      console.warn('Eagle: item/info returned non-success', { itemId, status: infoData?.status })
+    } else if (!infoData.data?.name || !infoData.data?.ext) {
+      console.warn('Eagle: item/info response missing name/ext', { itemId, data: infoData.data })
+    } else {
+      const { name, ext } = infoData.data
+      const libraryRoot = this.settings.knownLibraryPath || await this.getLibraryRootPath()
+      if (!libraryRoot) {
+        console.warn('Eagle: cannot resolve library root — falling back to eagle:// URL', { itemId })
+      } else {
+        const filePath = `${libraryRoot}/images/${itemId}.info/${name}.${ext}`
+        const result = normalizeEagleApiPathToFileUrl(filePath)
+        this.fileUrlCache.set(itemId, result)
+        return result
+      }
     }
 
     return `${EAGLE_URL_PROTOCOL}${itemId}`
+  }
+
+  async getLibraryRootPath(): Promise<string | null> {
+    const { eagleHost, eaglePort } = this.settings
+    const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.LIBRARY_INFO}`
+    const data = await this.requestJson<{ status: string; data?: { library?: { path?: string } } }>(url, 'GET')
+    return data?.data?.library?.path ?? null
   }
 
   /**
@@ -316,6 +358,26 @@ export default class EagleUploader {
     return this.createFolder(name)
   }
 
+  private firstNonEmptyStringValue(candidate: EagleRawItemCandidate, keys: string[]): string | undefined {
+    for (const key of keys) {
+      const value = (candidate as Record<string, unknown>)[key]
+      if (typeof value === 'string' && value.trim()) {
+        return value
+      }
+    }
+    return undefined
+  }
+
+  private extractThumbnailCandidate(candidate: EagleRawItemCandidate): string | undefined {
+    return this.firstNonEmptyStringValue(candidate, [
+      'thumbnail',
+      'thumb',
+      'thumbnailPath',
+      'preview',
+      'previewPath',
+    ])
+  }
+
   async searchItems({
     keyword,
     limit = 200,
@@ -360,16 +422,7 @@ export default class EagleUploader {
 
     return rawItems
       .map((item) => {
-        const candidate = item as Partial<EagleItemSearchResult> & {
-          id?: string
-          name?: string
-          ext?: string
-          tags?: string | string[]
-          annotation?: string
-          isDeleted?: boolean
-          filePath?: string
-          thumbnail?: string
-        }
+        const candidate = item as EagleRawItemCandidate
 
         if (!candidate.id || typeof candidate.id !== 'string') {
           return null
@@ -389,7 +442,7 @@ export default class EagleUploader {
           annotation: candidate.annotation,
           isDeleted: candidate.isDeleted,
           filePath: candidate.filePath,
-          thumbnail: candidate.thumbnail,
+          thumbnail: this.extractThumbnailCandidate(candidate),
         }
       })
       .filter((item): item is EagleItemSearchResult => item !== null)

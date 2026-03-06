@@ -155,6 +155,7 @@ vi.mock('obsidian', () => ({
   App,
   Modal,
   TextComponent,
+  Platform: { resourcePathPrefix: 'app://local/' },
 }))
 
 describe('EagleSearchPickerModal', () => {

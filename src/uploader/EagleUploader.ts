@@ -168,13 +168,16 @@ export default class EagleUploader {
     try {
       itemId = await this.addToEagle(tempFilePath, folderId)
     } finally {
-      const adapter = this.app.vault.adapter as any
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      adapter.fs.unlink(tempFilePath, (err: NodeJS.ErrnoException | null) => {
-        if (err && err.code !== 'ENOENT') {
-          console.warn('Eagle: failed to delete temp file', { tempFilePath, code: err.code, message: err.message })
-        }
-      })
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      const fs = (this.app.vault?.adapter as any)?.fs
+      if (fs?.unlink) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        fs.unlink(tempFilePath, (err: NodeJS.ErrnoException | null) => {
+          if (err && err.code !== 'ENOENT') {
+            console.warn('Eagle: failed to delete temp file', { tempFilePath, code: err.code, message: err.message })
+          }
+        })
+      }
     }
 
     await new Promise((resolve) => setTimeout(resolve, EAGLE_PROCESSING_DELAY_MS))

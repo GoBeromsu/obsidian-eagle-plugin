@@ -135,3 +135,48 @@ export function findMarkdownImageTokens(markdown: string): MarkdownImageToken[] 
   return tokens
 }
 
+export interface WikilinkEmbedToken {
+  itemId: string
+  ext: string
+  start: number
+  end: number
+}
+
+/**
+ * Finds Eagle wikilink embed tokens of the form: ![[.eagle/ITEMID.EXT]]
+ * Skips fenced code blocks.
+ */
+export function findEagleWikilinkTokens(markdown: string): WikilinkEmbedToken[] {
+  const tokens: WikilinkEmbedToken[] = []
+  const codeRanges = fencedCodeBlockRanges(markdown)
+  const pattern = /!\[\[\.eagle\/([^.\]]+)\.([^\]]+)\]\]/g
+
+  for (const match of markdown.matchAll(pattern)) {
+    if (isOffsetInRanges(match.index!, codeRanges)) continue
+    tokens.push({
+      itemId: match[1],
+      ext: match[2],
+      start: match.index!,
+      end: match.index! + match[0].length,
+    })
+  }
+
+  return tokens
+}
+
+/**
+ * Applies a list of text replacements to `content` in reverse order so that
+ * earlier character positions remain valid after each splice.
+ */
+export function applyTextReplacements(
+  content: string,
+  replacements: { start: number; end: number; text: string }[],
+): string {
+  const sorted = [...replacements].sort((a, b) => b.start - a.start)
+  let result = content
+  for (const r of sorted) {
+    result = result.slice(0, r.start) + r.text + result.slice(r.end)
+  }
+  return result
+}
+

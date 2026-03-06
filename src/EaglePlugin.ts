@@ -703,6 +703,61 @@ export default class EaglePlugin extends Plugin {
     return mdView.editor
   }
 
+  async renameCache(oldFolder: string, newFolder: string): Promise<void> {
+    // Step 1: Update wikilinks in all markdown files
+    let updatedFiles = 0
+    let updatedLinks = 0
+    const files = this.app.vault.getMarkdownFiles()
+
+    await Promise.all(
+      files.map(async (file) => {
+        const content = await this.app.vault.read(file)
+        const tokens = findEagleWikilinkTokens(content, oldFolder)
+        if (tokens.length === 0) return
+
+        const replacements = tokens.map((t) => ({
+          start: t.start,
+          end: t.end,
+          text: `![[${newFolder}/${t.itemId}.${t.ext}]]`,
+        }))
+        await this.app.vault.modify(file, applyTextReplacements(content, replacements))
+        updatedFiles++
+        updatedLinks += replacements.length
+      }),
+    )
+
+    // Step 2: Move cached files from oldFolder to newFolder
+    this._cacheManager = new EagleCacheManager(this.app, newFolder)
+
+    let movedFiles = 0
+    try {
+      const listed = await this.app.vault.adapter.list(oldFolder)
+      await Promise.allSettled(
+        listed.files.map(async (srcPath) => {
+          const fileName = srcPath.split('/').pop()!
+          const dotIdx = fileName.indexOf('.')
+          if (dotIdx === -1) return
+          const itemId = fileName.slice(0, dotIdx)
+          const ext = fileName.slice(dotIdx + 1)
+          try {
+            const data = await this.app.vault.adapter.readBinary(srcPath)
+            await this._cacheManager.cacheFromBuffer(itemId, ext, data)
+            movedFiles++
+          } catch (err) {
+            console.warn('Eagle: failed to move cache file', { srcPath, err })
+          }
+        }),
+      )
+    } catch {
+      // oldFolder doesn't exist or is empty — that's fine
+    }
+
+    new Notice(
+      `Eagle: Renamed cache folder. Updated ${updatedLinks} link(s) in ${updatedFiles} file(s), moved ${movedFiles} file(s). Old folder '${oldFolder}' can be deleted manually.`,
+      10000,
+    )
+  }
+
   getTargetEagleFolderForActiveFile(): string | undefined {
     return this.resolveTargetEagleFolderForActiveFile()
   }

@@ -1,0 +1,10 @@
+{
+  "eagleHost": "localhost",
+  "eaglePort": 41595,
+  "eagleFolderName": "",
+  "folderMappings": [],
+  "debugSearchDiagnostics": false,
+  "fallbackImageFormat": "jpeg",
+  "conversionQualityForJpeg": 0.9,
+  "knownLibraryPath": "/Users/beomsu/Ataraxia.library"
+}

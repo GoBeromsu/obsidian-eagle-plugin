@@ -23,8 +23,14 @@ export default class EagleCacheManager {
     if (this.ensureFolderPromise === null) {
       this.ensureFolderPromise = (async () => {
         const { adapter } = this.app.vault
-        if (!(await adapter.exists(this.cacheFolder))) {
-          await adapter.mkdir(this.cacheFolder)
+        // Create each path segment in order to support nested folders like "80. References/07. eagle"
+        const parts = this.cacheFolder.split('/')
+        let current = ''
+        for (const part of parts) {
+          current = current ? `${current}/${part}` : part
+          if (!(await adapter.exists(current))) {
+            await adapter.mkdir(current)
+          }
         }
       })().catch((err) => {
         this.ensureFolderPromise = null // allow retry on next call

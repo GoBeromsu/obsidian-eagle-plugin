@@ -3,9 +3,11 @@ import { App, ButtonComponent, PluginSettingTab, Setting, TextComponent } from '
 import EaglePlugin from '../EaglePlugin'
 import { ObsidianEagleFolderMapping } from '../plugin-settings'
 import { sanitizeFolderMappings } from '../utils/folder-mapping'
+import RenameCacheModal from './RenameCacheModal'
 
 export default class EaglePluginSettingsTab extends PluginSettingTab {
   plugin: EaglePlugin
+  private originalCacheFolderName: string = ''
 
   constructor(app: App, plugin: EaglePlugin) {
     super(app, plugin)
@@ -14,6 +16,8 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
 
   display(): void {
     const { containerEl } = this
+
+    this.originalCacheFolderName = this.plugin.settings.cacheFolderName
 
     containerEl.empty()
 
@@ -100,14 +104,15 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Cache folder name')
-      .setDesc("Images are cached here. After changing, run 'Eagle: Migrate all images to eagle-cache' command.")
+      .setDesc(
+        "Images are cached here (supports subfolders: '80. References/07. eagle'). After renaming, confirm to move existing images.",
+      )
       .addText((text) =>
         text
           .setPlaceholder('eagle-cache')
           .setValue(this.plugin.settings.cacheFolderName)
           .onChange((value) => {
             this.plugin.settings.cacheFolderName = value.trim() || 'eagle-cache'
-            void this.plugin.saveSettings()
           }),
       )
 
@@ -202,5 +207,16 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
       this.plugin.settings.folderMappings ?? [],
     )
     void this.plugin.saveSettings()
+
+    const newFolder = this.plugin.settings.cacheFolderName
+    if (this.originalCacheFolderName && newFolder !== this.originalCacheFolderName) {
+      new RenameCacheModal(
+        this.plugin.app,
+        this.originalCacheFolderName,
+        newFolder,
+        () => void this.plugin.renameCache(this.originalCacheFolderName, newFolder),
+      ).open()
+      this.originalCacheFolderName = newFolder
+    }
   }
 }

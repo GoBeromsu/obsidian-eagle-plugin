@@ -1,4 +1,4 @@
-import { Canvas } from 'obsidian'
+import { Canvas, Notice } from 'obsidian'
 
 import EaglePlugin from './EaglePlugin'
 import ImageUploadBlockingModal from './ui/ImageUploadBlockingModal'
@@ -35,26 +35,42 @@ async function eagleCanvasPaste(
   }
 }
 
-function uploadImageOnCanvas(canvas: Canvas, plugin: EaglePlugin, e: ClipboardEvent) {
+async function uploadImageOnCanvas(
+  canvas: Canvas,
+  plugin: EaglePlugin,
+  e: ClipboardEvent,
+): Promise<void> {
   const modal = new ImageUploadBlockingModal(plugin.app)
   modal.open()
 
-  const file = e.clipboardData.files[0]
-  const folderName = plugin.getTargetEagleFolderForActiveFile()
-  return plugin.eagleUploader
-    .upload(file, { folderName })
-    .then(({ fileUrl, itemId }) => {
-      if (!modal.isOpen) {
-        return
-      }
+  let cancelled = false
+  modal.onCancel = () => {
+    cancelled = true
+  }
 
+  const file = e.clipboardData.files[0]
+  const folderName = plugin.resolveTargetEagleFolderForActiveFile()
+
+  try {
+    const { fileUrl, itemId } = await plugin.eagleUploader.upload(file, { folderName })
+
+    if (cancelled) {
       modal.close()
-      pasteRemoteImageToCanvas(canvas, itemId, fileUrl)
-    })
-    .catch((err) => {
+      new Notice('Upload cancelled — image was already sent to Eagle, please remove it manually.')
+      return
+    }
+    if (!modal.isOpen) return
+
+    modal.close()
+    pasteRemoteImageToCanvas(canvas, itemId, fileUrl)
+  } catch (err: unknown) {
+    if (cancelled) {
       modal.close()
-      throw err
-    })
+      return
+    }
+    modal.close()
+    throw err
+  }
 }
 
 function pasteRemoteImageToCanvas(canvas: Canvas, itemId: string, imageUrl: string) {

@@ -15,6 +15,7 @@ import { createEagleCanvasPasteHandler } from './Canvas'
 import { DEFAULT_SETTINGS, EaglePluginSettings } from './plugin-settings'
 import EaglePluginSettingsTab from './ui/EaglePluginSettingsTab'
 import EagleSearchPickerModal from './ui/EagleSearchPickerModal'
+import ImageUploadBlockingModal from './ui/ImageUploadBlockingModal'
 import InfoModal from './ui/InfoModal'
 import UpdateLinksConfirmationModal from './ui/UpdateLinksConfirmationModal'
 import EagleApiError from './uploader/EagleApiError'
@@ -70,36 +71,23 @@ export default class EaglePlugin extends Plugin {
   private _syncDebounceTimer: ReturnType<typeof setTimeout> | null = null
   private _lastSyncedFilePath: string | null = null
 
-  private customPasteEventCallback = (e: ClipboardEvent) => {
-    const { files } = e.clipboardData
-
-    if (!allFilesAreImages(files)) {
-      return
-    }
+  private handleImageFiles(files: FileList, e: Event): void {
+    if (!allFilesAreImages(files)) return
 
     e.preventDefault()
-
     for (const file of files) {
-      void this.uploadFileAndEmbedEagleImage(file).catch((e) => {
-        console.error('Failed to upload image: ', e)
+      void this.uploadFileAndEmbedEagleImage(file).catch((err) => {
+        console.error('Failed to upload image: ', err)
       })
     }
   }
 
+  private customPasteEventCallback = (e: ClipboardEvent) => {
+    this.handleImageFiles(e.clipboardData.files, e)
+  }
+
   private customDropEventListener = (e: DragEvent) => {
-    const { files } = e.dataTransfer
-
-    if (!allFilesAreImages(files)) {
-      return
-    }
-
-    e.preventDefault()
-
-    for (const file of files) {
-      void this.uploadFileAndEmbedEagleImage(file).catch((e) => {
-        console.error('Failed to upload image: ', e)
-      })
-    }
+    this.handleImageFiles(e.dataTransfer.files, e)
   }
 
   private eaglePluginRightClickHandler = (menu: Menu, editor: Editor, view: MarkdownView) => {
@@ -143,7 +131,9 @@ export default class EaglePlugin extends Plugin {
     }
   }
 
-  private getAllCachedReferencesForFile = getAllCachedReferencesForFile(this.app.metadataCache)
+  private getAllCachedReferencesForFile(file: TFile): Record<string, ReferenceCache[]> {
+    return getAllCachedReferencesForFile(this.app.metadataCache, file)
+  }
 
   private removeReferenceToOriginalNoteIfPresent = (
     referencesByNote: Record<string, ReferenceCache[]>,
@@ -580,11 +570,26 @@ export default class EaglePlugin extends Plugin {
     const pasteId = generatePseudoRandomId()
     this.insertTemporaryText(pasteId, atPos)
 
-    let markdownImage: string
+    const modal = new ImageUploadBlockingModal(this.app)
+    modal.open()
+    let cancelled = false
+    modal.onCancel = () => {
+      cancelled = true
+    }
+
+    let markdownImage = ''
     try {
       const folderName = this.resolveTargetEagleFolderForActiveFile()
       const normalizedFile = await normalizeImageForUpload(file, this._settings)
       const { itemId, fileUrl, ext } = await this._eagleUploader.upload(normalizedFile, { folderName })
+
+      if (cancelled) {
+        modal.close()
+        new Notice('Upload cancelled — image was already sent to Eagle, please remove it manually.')
+        this.handleFailedUpload(pasteId, '<!-- upload cancelled -->')
+        return markdownImage
+      }
+
       if (fileUrl.startsWith('file://')) {
         await this._cacheManager.cacheFromOsPath(itemId, ext, fileUrlToOsPath(fileUrl)).catch((e) => {
           console.warn('Eagle: cache write failed — image may appear broken', e)
@@ -592,6 +597,11 @@ export default class EaglePlugin extends Plugin {
       }
       markdownImage = this.markdownImageFor(itemId, ext)
     } catch (e) {
+      modal.close()
+      if (cancelled) {
+        this.handleFailedUpload(pasteId, '<!-- upload cancelled -->')
+        return markdownImage
+      }
       if (e instanceof EagleApiError) {
         this.handleFailedUpload(pasteId, `Eagle upload failed, API returned an error: ${e.message}`)
       } else {
@@ -600,6 +610,8 @@ export default class EaglePlugin extends Plugin {
       }
       throw e
     }
+
+    modal.close()
     this.embedMarkDownImage(pasteId, markdownImage)
     return markdownImage
   }
@@ -636,6 +648,7 @@ export default class EaglePlugin extends Plugin {
 
   private get activeEditor(): Editor {
     const mdView = this.app.workspace.getActiveViewOfType(MarkdownView)
+    if (!mdView) throw new Error('No active Markdown editor')
     return mdView.editor
   }
 
@@ -693,11 +706,7 @@ export default class EaglePlugin extends Plugin {
     )
   }
 
-  getTargetEagleFolderForActiveFile(): string | undefined {
-    return this.resolveTargetEagleFolderForActiveFile()
-  }
-
-  private resolveTargetEagleFolderForActiveFile(): string | undefined {
+  resolveTargetEagleFolderForActiveFile(): string | undefined {
     const activeFilePath = this.app.workspace.getActiveFile()?.path ?? null
     const mappedFolderName = resolveMappedEagleFolder(activeFilePath, this._settings.folderMappings)
     if (mappedFolderName) {

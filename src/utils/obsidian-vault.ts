@@ -1,34 +1,38 @@
 import { MetadataCache, ReferenceCache, TFile, Vault } from 'obsidian'
 
-export const getAllCachedReferencesForFile = (metadataCache: MetadataCache) => (file: TFile) => {
+function matchesFile(linkTarget: string, file: TFile): boolean {
+  return linkTarget === file.path || linkTarget === file.name
+}
+
+export function getAllCachedReferencesForFile(
+  metadataCache: MetadataCache,
+  file: TFile,
+): Record<string, ReferenceCache[]> {
   const allLinks = metadataCache.resolvedLinks
 
-  const notesWithLinks = []
+  const notesWithLinks: string[] = []
   for (const [notePath, noteLinks] of Object.entries(allLinks)) {
-    for (const [linkName] of Object.entries(noteLinks)) {
-      if (linkName === file.name) notesWithLinks.push(notePath)
+    for (const linkTarget of Object.keys(noteLinks)) {
+      if (matchesFile(linkTarget, file)) notesWithLinks.push(notePath)
     }
   }
 
-  const linksByNote = notesWithLinks.reduce(
-    (acc, note) => {
-      const noteMetadata = metadataCache.getCache(note)
-      const noteLinks = noteMetadata.embeds
-      if (noteLinks) {
-        acc[note] = noteLinks.filter((l) => l.link === file.name)
-      }
-      return acc
-    },
-    {} as Record<string, ReferenceCache[]>,
-  )
+  const linksByNote: Record<string, ReferenceCache[]> = {}
+  for (const notePath of notesWithLinks) {
+    const embeds = metadataCache.getCache(notePath)?.embeds
+    if (!embeds) continue
+    const matching = embeds.filter((l) => matchesFile(l.link, file))
+    if (matching.length > 0) linksByNote[notePath] = matching
+  }
+
   return linksByNote
 }
 
-export const filesAndLinksStatsFrom = (referencesByNote: Record<string, ReferenceCache[]>) => {
-  return {
-    filesCount: Object.keys(referencesByNote).length,
-    linksCount: Object.values(referencesByNote).reduce((count, refs) => count + refs.length, 0),
-  }
+export function filesAndLinksStatsFrom(
+  referencesByNote: Record<string, ReferenceCache[]>,
+): { filesCount: number; linksCount: number } {
+  const linksCount = Object.values(referencesByNote).reduce((count, refs) => count + refs.length, 0)
+  return { filesCount: Object.keys(referencesByNote).length, linksCount }
 }
 
 export async function replaceAllLocalReferencesWithRemoteOne(

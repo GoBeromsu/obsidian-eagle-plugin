@@ -1,4 +1,4 @@
-import { App, ButtonComponent, PluginSettingTab, Setting, TextComponent } from 'obsidian'
+import { App, ButtonComponent, Notice, PluginSettingTab, Setting, TextComponent } from 'obsidian'
 
 import EaglePlugin from '../EaglePlugin'
 import { ObsidianEagleFolderMapping } from '../plugin-settings'
@@ -23,6 +23,9 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
 
     containerEl.createEl('h2', { text: 'Eagle Plugin Settings' })
 
+    // ── Connection ──────────────────────────────────────────────────────────
+    containerEl.createEl('h3', { text: 'Connection' })
+
     new Setting(containerEl)
       .setName('Eagle API Host')
       .setDesc('The host for your running Eagle instance.')
@@ -32,6 +35,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.eagleHost)
           .onChange((value) => {
             this.plugin.settings.eagleHost = value
+            void this.plugin.saveSettings()
           }),
       )
 
@@ -44,22 +48,104 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.eaglePort.toString())
           .onChange((value) => {
             this.plugin.settings.eaglePort = value ? Number.parseInt(value) : 41595
+            void this.plugin.saveSettings()
           }),
       )
 
     new Setting(containerEl)
+      .setName('Test connection')
+      .setDesc('Verify that Eagle is reachable with the current host and port.')
+      .addButton((btn) => {
+        btn.setButtonText('Test Connection').onClick(async () => {
+          btn.setDisabled(true)
+          btn.setButtonText('Testing…')
+          const connected = await this.plugin.eagleUploader.isConnected()
+          if (connected) {
+            new Notice('Connected to Eagle')
+          } else {
+            new Notice('Cannot reach Eagle — check host/port')
+          }
+          btn.setDisabled(false)
+          btn.setButtonText('Test Connection')
+        })
+      })
+
+    containerEl.createEl('hr')
+
+    // ── Upload ───────────────────────────────────────────────────────────────
+    containerEl.createEl('h3', { text: 'Upload' })
+
+    const folderSetting = new Setting(containerEl)
       .setName('Eagle Folder Name')
       .setDesc(
         'The folder name in Eagle where images will be saved. Leave empty to save to the default folder.',
       )
-      .addText((text) =>
-        text
-          .setPlaceholder('Obsidian')
-          .setValue(this.plugin.settings.eagleFolderName)
+
+    folderSetting.addText((text) =>
+      text
+        .setPlaceholder('Obsidian')
+        .setValue(this.plugin.settings.eagleFolderName)
+        .onChange((value) => {
+          this.plugin.settings.eagleFolderName = value
+          void this.plugin.saveSettings()
+        }),
+    )
+
+    void this.upgradeToFolderDropdown(folderSetting)
+
+    new Setting(containerEl)
+      .setName('Fallback format for unsupported images')
+      .setDesc('Convert unsupported image formats to this format before upload.')
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption('jpeg', 'jpeg')
+          .addOption('png', 'png')
+          .addOption('webp', 'webp')
+          .setValue(this.plugin.settings.fallbackImageFormat)
           .onChange((value) => {
-            this.plugin.settings.eagleFolderName = value
+            this.plugin.settings.fallbackImageFormat = value as 'jpeg' | 'png' | 'webp'
+            void this.plugin.saveSettings()
           }),
       )
+
+    new Setting(containerEl)
+      .setName('JPEG conversion quality')
+      .setDesc('Quality for JPEG conversion output (0–1).')
+      .addSlider((slider) =>
+        slider
+          .setLimits(0, 1, 0.05)
+          .setValue(this.plugin.settings.conversionQualityForJpeg)
+          .setDynamicTooltip()
+          .onChange((value) => {
+            this.plugin.settings.conversionQualityForJpeg = value
+            void this.plugin.saveSettings()
+          }),
+      )
+
+    containerEl.createEl('hr')
+
+    // ── Cache ────────────────────────────────────────────────────────────────
+    containerEl.createEl('h3', { text: 'Cache' })
+
+    new Setting(containerEl)
+      .setName('Cache folder name')
+      .setDesc(
+        "Images are cached here (supports subfolders: '80. References/07. eagle'). After renaming, confirm to move existing images.",
+      )
+      .addText((text) =>
+        text
+          .setPlaceholder('eagle-cache')
+          .setValue(this.plugin.settings.cacheFolderName)
+          .onChange((value) => {
+            this.plugin.settings.cacheFolderName = value.trim() || 'eagle-cache'
+            void this.plugin.saveSettings()
+          }),
+      )
+
+    containerEl.createEl('hr')
+
+    // ── Advanced ─────────────────────────────────────────────────────────────
+    containerEl.createEl('h3', { text: 'Advanced' })
 
     new Setting(containerEl)
       .setName('Search diagnostics (debug)')
@@ -73,56 +159,12 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
           }),
       )
 
-    new Setting(containerEl)
-      .setName('Fallback format for unsupported images')
-      .setDesc('Convert unsupported image formats to this format before upload.')
-      .addDropdown((dropdown) =>
-        dropdown
-          .addOption('jpeg', 'jpeg')
-          .addOption('png', 'png')
-          .addOption('webp', 'webp')
-          .setValue(this.plugin.settings.fallbackImageFormat)
-          .onChange((value) => {
-            this.plugin.settings.fallbackImageFormat = value as 'jpeg' | 'png' | 'webp'
-          }),
-      )
-
-    new Setting(containerEl)
-      .setName('JPEG conversion quality')
-      .setDesc('Quality for JPEG conversion output (0~1).')
-      .addText((text) =>
-        text
-          .setPlaceholder('0.9')
-          .setValue(this.plugin.settings.conversionQualityForJpeg.toString())
-          .onChange((value) => {
-            const parsed = Number.parseFloat(value)
-            if (!Number.isNaN(parsed)) {
-              this.plugin.settings.conversionQualityForJpeg = Math.min(1, Math.max(0, parsed))
-            }
-          }),
-      )
-
-    new Setting(containerEl)
-      .setName('Cache folder name')
-      .setDesc(
-        "Images are cached here (supports subfolders: '80. References/07. eagle'). After renaming, confirm to move existing images.",
-      )
-      .addText((text) =>
-        text
-          .setPlaceholder('eagle-cache')
-          .setValue(this.plugin.settings.cacheFolderName)
-          .onChange((value) => {
-            this.plugin.settings.cacheFolderName = value.trim() || 'eagle-cache'
-          }),
-      )
+    containerEl.createEl('hr')
 
     this.renderFolderMappingsSection(containerEl)
   }
 
   private renderFolderMappingsSection(containerEl: HTMLElement): void {
-    const mappings = this.plugin.settings.folderMappings ?? []
-    this.plugin.settings.folderMappings = mappings
-
     containerEl.createEl('h3', { text: 'Folder Mapping (Obsidian -> Eagle)' })
     containerEl.createEl('p', {
       cls: 'eagle-folder-mapping-description',
@@ -169,29 +211,25 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
   ): void {
     const row = listContainer.createDiv({ cls: 'eagle-folder-mapping-row' })
 
-    const obsidianFolderInput = new TextComponent(row)
-      .setPlaceholder('Obsidian folder (ex: Projects/Design)')
-      .setValue(mapping.obsidianFolder)
-      .onChange((value) => {
-        const currentMapping = this.plugin.settings.folderMappings[index]
-        if (!currentMapping) {
-          return
-        }
-        currentMapping.obsidianFolder = value
-      })
-    obsidianFolderInput.inputEl.addClass('eagle-folder-mapping-input')
+    const addMappingInput = (
+      placeholder: string,
+      value: string,
+      field: keyof ObsidianEagleFolderMapping,
+    ) => {
+      const input = new TextComponent(row)
+        .setPlaceholder(placeholder)
+        .setValue(value)
+        .onChange((newValue) => {
+          const currentMapping = this.plugin.settings.folderMappings[index]
+          if (!currentMapping) return
+          currentMapping[field] = newValue
+          void this.plugin.saveSettings()
+        })
+      input.inputEl.addClass('eagle-folder-mapping-input')
+    }
 
-    const eagleFolderInput = new TextComponent(row)
-      .setPlaceholder('Eagle folder (ex: Design)')
-      .setValue(mapping.eagleFolder)
-      .onChange((value) => {
-        const currentMapping = this.plugin.settings.folderMappings[index]
-        if (!currentMapping) {
-          return
-        }
-        currentMapping.eagleFolder = value
-      })
-    eagleFolderInput.inputEl.addClass('eagle-folder-mapping-input')
+    addMappingInput('Obsidian folder (ex: Projects/Design)', mapping.obsidianFolder, 'obsidianFolder')
+    addMappingInput('Eagle folder (ex: Design)', mapping.eagleFolder, 'eagleFolder')
 
     new ButtonComponent(row)
       .setIcon('trash')
@@ -199,12 +237,47 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
       .onClick(() => {
         this.plugin.settings.folderMappings.splice(index, 1)
         onRemoved()
+        void this.plugin.saveSettings()
       })
+  }
+
+  /**
+   * Try to replace the plain text input with a live dropdown populated from Eagle.
+   * If Eagle is unreachable, keep the text input and update the description.
+   */
+  private async upgradeToFolderDropdown(folderSetting: Setting): Promise<void> {
+    try {
+      const folders = await this.plugin.eagleUploader.listFolders()
+      folderSetting.controlEl.empty()
+      folderSetting.addDropdown((dropdown) => {
+        dropdown.addOption('', '— default folder —')
+        for (const folder of folders) {
+          dropdown.addOption(folder.path, folder.path)
+        }
+        const currentValue = this.plugin.settings.eagleFolderName
+        const exists = folders.some((f) => f.path === currentValue)
+        if (currentValue && !exists) {
+          dropdown.addOption(currentValue, currentValue)
+        }
+        dropdown.setValue(currentValue)
+        dropdown.onChange((value) => {
+          this.plugin.settings.eagleFolderName = value
+          void this.plugin.saveSettings()
+        })
+      })
+    } catch (err) {
+      if (!(err instanceof Error && err.message.includes('connect'))) {
+        console.error('Eagle: unexpected error while loading folder list', err)
+      }
+      folderSetting.setDesc(
+        'The folder name in Eagle where images will be saved. (Eagle not reachable — type folder name manually)',
+      )
+    }
   }
 
   override hide() {
     this.plugin.settings.folderMappings = sanitizeFolderMappings(
-      this.plugin.settings.folderMappings ?? [],
+      this.plugin.settings.folderMappings,
     )
     void this.plugin.saveSettings()
 

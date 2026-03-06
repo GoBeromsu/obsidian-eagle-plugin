@@ -14,6 +14,7 @@ export interface EaglePluginSettings {
   fallbackImageFormat: FallbackImageFormat
   conversionQualityForJpeg: number
   cacheFolderName: string
+  deduplicateUploads: boolean
 }
 
 export const DEFAULT_SETTINGS: EaglePluginSettings = {
@@ -25,4 +26,5 @@ export const DEFAULT_SETTINGS: EaglePluginSettings = {
   fallbackImageFormat: 'jpeg',
   conversionQualityForJpeg: 0.9,
   cacheFolderName: 'eagle-cache',
+  deduplicateUploads: true,
 }

@@ -1,21 +1,32 @@
 import { ButtonComponent, Modal } from 'obsidian'
 
 export default class ImageUploadBlockingModal extends Modal {
-  isOpen: boolean
+  isOpen = false
+  onCancel?: () => void
+  private buttonsDiv: HTMLElement
 
   override onOpen(): void {
     this.titleEl.setText('Eagle plugin')
     this.contentEl.setText('Uploading image...')
 
-    const buttonsDiv = this.modalEl.createDiv('modal-button-container')
+    this.buttonsDiv = this.modalEl.createDiv('modal-button-container')
 
-    new ButtonComponent(buttonsDiv)
+    new ButtonComponent(this.buttonsDiv)
       .setButtonText('Cancel')
       .setCta()
       .onClick(() => {
+        this.onCancel?.()
         this.close()
       })
     this.isOpen = true
+  }
+
+  showError(message: string): void {
+    this.contentEl.setText(message)
+    this.buttonsDiv.empty()
+    new ButtonComponent(this.buttonsDiv)
+      .setButtonText('Close')
+      .onClick(() => this.close())
   }
 
   override onClose(): void {

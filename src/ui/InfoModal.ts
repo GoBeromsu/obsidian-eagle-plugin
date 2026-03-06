@@ -8,6 +8,6 @@ export default class InfoModal extends Modal {
     this.contentEl.createEl('p', { text: message })
 
     const buttonsDiv = this.modalEl.createDiv('modal-button-container')
-    new ButtonComponent(buttonsDiv).setButtonText('Ok')
+    new ButtonComponent(buttonsDiv).setButtonText('Ok').onClick(() => this.close())
   }
 }

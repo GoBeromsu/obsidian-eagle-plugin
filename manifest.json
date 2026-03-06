@@ -1,11 +1,10 @@
 {
-  "id": "obsidian-eagle-plugin",
-  "name": "Eagle Integration",
-  "version": "2.2.1",
-  "minAppVersion": "0.15.0",
-  "description": "Upload images to Eagle and integrate with Obsidian notes.",
-  "author": "Beomsu Koh",
-  "authorUrl": "https://github.com/GoBeromsu/obsidian-eagle-plugin",
-
-  "isDesktopOnly": false
+	"id": "obsidian-eagle-plugin",
+	"name": "Eagle Integration",
+	"version": "2.3.0",
+	"minAppVersion": "0.15.0",
+	"description": "Upload images to Eagle and integrate with Obsidian notes.",
+	"author": "Beomsu Koh",
+	"authorUrl": "https://github.com/GoBeromsu/obsidian-eagle-plugin",
+	"isDesktopOnly": false
 }

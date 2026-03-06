@@ -24,7 +24,9 @@ function fencedCodeBlockRanges(markdown: string): Range[] {
   const lines = markdown.split('\n')
   for (const line of lines) {
     const trimmed = line.trimStart()
-    const fence = trimmed.startsWith('```') ? '```' : trimmed.startsWith('~~~') ? '~~~' : null
+    let fence: '```' | '~~~' | null = null
+    if (trimmed.startsWith('```')) fence = '```'
+    else if (trimmed.startsWith('~~~')) fence = '~~~'
 
     if (fence) {
       if (openFence === null) {
@@ -166,28 +168,6 @@ export function findEagleWikilinkTokens(markdown: string, cacheFolder: string): 
 }
 
 /**
- * Finds Eagle wikilink embed tokens of the old dotfolder form: ![[.eagle/ITEMID.EXT]]
- * Used for backward-compat migration. Skips fenced code blocks.
- */
-export function findDotEagleWikilinkTokens(markdown: string): WikilinkEmbedToken[] {
-  const tokens: WikilinkEmbedToken[] = []
-  const codeRanges = fencedCodeBlockRanges(markdown)
-  const pattern = /!\[\[\.eagle\/([^.\]]+)\.([^\]]+)\]\]/g
-
-  for (const match of markdown.matchAll(pattern)) {
-    if (isOffsetInRanges(match.index, codeRanges)) continue
-    tokens.push({
-      itemId: match[1],
-      ext: match[2],
-      start: match.index,
-      end: match.index + match[0].length,
-    })
-  }
-
-  return tokens
-}
-
-/**
  * Applies a list of text replacements to `content` in reverse order so that
  * earlier character positions remain valid after each splice.
  */
@@ -202,4 +182,3 @@ export function applyTextReplacements(
   }
   return result
 }
-

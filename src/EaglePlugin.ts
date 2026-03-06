@@ -20,11 +20,11 @@ import UpdateLinksConfirmationModal from './ui/UpdateLinksConfirmationModal'
 import EagleApiError from './uploader/EagleApiError'
 import EagleUploader, { type EagleItemSearchResult } from './uploader/EagleUploader'
 import { findLocalFileUnderCursor, replaceFirstOccurrence } from './utils/editor'
-import { filePathToFileUrl, fileUrlToDisplayUrl, fileUrlToOsPath } from './utils/file-url'
+import { fileUrlToDisplayUrl, fileUrlToOsPath } from './utils/file-url'
 import { allFilesAreImages } from './utils/FileList'
 import { resolveMappedEagleFolder, sanitizeFolderMappings } from './utils/folder-mapping'
 import { extractFileExtension } from './utils/image-format'
-import { applyTextReplacements, findDotEagleWikilinkTokens, findEagleWikilinkTokens, findMarkdownImageTokens } from './utils/markdown-image'
+import { applyTextReplacements, findEagleWikilinkTokens, findMarkdownImageTokens } from './utils/markdown-image'
 import { normalizeImageForUpload, removeReferenceIfPresent } from './utils/misc'
 import {
   filesAndLinksStatsFrom,
@@ -46,6 +46,11 @@ interface LocalImageInEditor {
   }
   editor: Editor
   noteFile: TFile
+}
+
+interface OldFormatCandidate {
+  token: ReturnType<typeof findMarkdownImageTokens>[number]
+  itemId: string
 }
 
 export default class EaglePlugin extends Plugin {
@@ -233,10 +238,18 @@ export default class EaglePlugin extends Plugin {
     this.registerEvent(this.app.workspace.on('editor-drop', this.customDropEventListener))
     this.registerEvent(
       this.app.workspace.on('active-leaf-change', (leaf) => {
-        const { view } = leaf
+        const view = leaf?.view
+        if (!view) return
 
         if (view.getViewType() === 'canvas') {
           this.overridePasteHandlerForCanvasView(view as unknown as CanvasView)
+        }
+
+        const file = (view as any).file
+        if (file instanceof TFile && file.extension === 'md') {
+          void this.syncCacheForFile(file).catch((err) => {
+            console.error('Eagle: syncCacheForFile failed', err)
+          })
         }
       }),
     )
@@ -278,10 +291,8 @@ export default class EaglePlugin extends Plugin {
   private async migrateAllImages(): Promise<void> {
     const cacheFolderName = this._settings.cacheFolderName
 
-    // Phase 1: Scan all files for old-format and .eagle/ tokens in parallel
-    interface OldCandidate { token: ReturnType<typeof findMarkdownImageTokens>[number]; itemId: string }
-    const oldFormatByFile = new Map<string, { file: TFile; content: string; candidates: OldCandidate[] }>()
-    const dotEagleByFile = new Map<string, { file: TFile; content: string; candidates: ReturnType<typeof findDotEagleWikilinkTokens> }>()
+    // Phase 1: Scan all files for old-format tokens in parallel
+    const oldFormatByFile = new Map<string, { file: TFile; content: string; candidates: OldFormatCandidate[] }>()
     const itemIds = new Set<string>()
 
     const fileResults = await Promise.all(
@@ -289,24 +300,19 @@ export default class EaglePlugin extends Plugin {
         const content = await this.app.vault.read(file)
         const oldCandidates = findMarkdownImageTokens(content)
           .map((token) => ({ token, itemId: EaglePlugin.eagleItemIdFromAlt(token.alt) }))
-          .filter((c): c is OldCandidate => c.itemId !== null)
-        const dotEagleCandidates = findDotEagleWikilinkTokens(content)
-        return { file, content, oldCandidates, dotEagleCandidates }
+          .filter((c): c is OldFormatCandidate => c.itemId !== null)
+        return { file, content, oldCandidates }
       }),
     )
 
-    for (const { file, content, oldCandidates, dotEagleCandidates } of fileResults) {
+    for (const { file, content, oldCandidates } of fileResults) {
       if (oldCandidates.length > 0) {
         oldFormatByFile.set(file.path, { file, content, candidates: oldCandidates })
         for (const { itemId } of oldCandidates) itemIds.add(itemId)
       }
-      if (dotEagleCandidates.length > 0) {
-        dotEagleByFile.set(file.path, { file, content, candidates: dotEagleCandidates })
-        for (const t of dotEagleCandidates) itemIds.add(t.itemId)
-      }
     }
 
-    if (oldFormatByFile.size === 0 && dotEagleByFile.size === 0) {
+    if (oldFormatByFile.size === 0) {
       new Notice('Eagle: No images to migrate.')
       return
     }
@@ -347,59 +353,16 @@ export default class EaglePlugin extends Plugin {
       }),
     )
 
-    // Fallback: for .eagle/ tokens not resolved via Eagle API, copy from .eagle/ vault folder
-    const dotEagleFallback = new Map<string, string>() // itemId → ext
-    for (const entry of dotEagleByFile.values()) {
-      for (const t of entry.candidates) {
-        if (!successExt.has(t.itemId) && !dotEagleFallback.has(t.itemId)) {
-          dotEagleFallback.set(t.itemId, t.ext)
-        }
-      }
-    }
-
-    await Promise.allSettled(
-      Array.from(dotEagleFallback.entries()).map(async ([itemId, ext]) => {
-        try {
-          const srcPath = `.eagle/${itemId}.${ext}`
-          const exists = await this.app.vault.adapter.exists(srcPath)
-          if (!exists) {
-            failedIds.add(itemId)
-            return
-          }
-          const data = await this.app.vault.adapter.readBinary(srcPath)
-          await this._cacheManager.cacheFromBuffer(itemId, ext, data)
-          successExt.set(itemId, ext)
-          failedIds.delete(itemId)
-        } catch (err) {
-          console.error('Eagle: failed to copy from .eagle/ folder', { itemId, err })
-          failedIds.add(itemId)
-        }
-      }),
-    )
-
     // Phase 4: Update vault files
     let migratedCount = 0
-    const allPaths = new Set([...oldFormatByFile.keys(), ...dotEagleByFile.keys()])
 
-    for (const filePath of allPaths) {
-      const oldEntry = oldFormatByFile.get(filePath)
-      const dotEagleEntry = dotEagleByFile.get(filePath)
-      const file = (oldEntry ?? dotEagleEntry).file
-      const content = (oldEntry ?? dotEagleEntry).content
-
+    for (const [, { file, content, candidates }] of oldFormatByFile) {
       const replacements: { start: number; end: number; text: string }[] = []
 
-      for (const { token, itemId } of (oldEntry?.candidates ?? [])) {
+      for (const { token, itemId } of candidates) {
         const ext = successExt.get(itemId)
         if (!ext) continue
         replacements.push({ start: token.start, end: token.end, text: `![[${cacheFolderName}/${itemId}.${ext}]]` })
-        migratedCount++
-      }
-
-      for (const t of (dotEagleEntry?.candidates ?? [])) {
-        if (!successExt.has(t.itemId)) continue
-        const ext = successExt.get(t.itemId) ?? t.ext
-        replacements.push({ start: t.start, end: t.end, text: `![[${cacheFolderName}/${t.itemId}.${ext}]]` })
         migratedCount++
       }
 
@@ -467,53 +430,46 @@ export default class EaglePlugin extends Plugin {
     )
   }
 
+  private async syncCacheForFile(file: TFile): Promise<void> {
+    if (!(await this._eagleUploader.isConnected())) return
+
+    const content = await this.app.vault.read(file)
+    const tokens = findEagleWikilinkTokens(content, this._cacheManager.cacheFolder)
+    if (tokens.length === 0) return
+
+    await Promise.allSettled(
+      tokens.map(async ({ itemId, ext }) => {
+        const isCached = await this._cacheManager.isCached(itemId, ext)
+        const exists = await this._eagleUploader.itemExists(itemId)
+
+        if (!exists && isCached) {
+          // Item deleted from Eagle — evict from cache
+          await this._cacheManager.removeCache(itemId, ext)
+        } else if (exists && !isCached) {
+          // Cache miss — backfill
+          try {
+            const fileUrl = await this._eagleUploader.getFileUrlForItemId(itemId)
+            if (fileUrl.startsWith('file://')) {
+              await this._cacheManager.cacheFromOsPath(itemId, ext, fileUrlToOsPath(fileUrl))
+            }
+          } catch (err) {
+            if (!(err instanceof EagleApiError)) {
+              console.warn('Eagle: syncCacheForFile backfill failed', { itemId, err })
+            }
+          }
+        }
+      }),
+    )
+  }
+
   private static eagleItemIdFromAlt(alt: string) {
-    // eslint-disable-next-line @typescript-eslint/prefer-regexp-exec
     const match = alt.trim().match(/^eagle:([A-Za-z0-9]+)(?:\|\d+)?$/)
     return match ? match[1] : null
   }
 
   private static eagleItemIdFromLink(link: string) {
-    // eslint-disable-next-line @typescript-eslint/prefer-regexp-exec
     const match = link.match(/[\\/]+images[\\/]+([^\\/]+)\.info[\\/]+/i)
     return match ? match[1] : null
-  }
-
-  private processEagleWikilinkEmbed(embed: HTMLElement): void {
-    const existingImg = embed.querySelector<HTMLImageElement>('img')
-    if (existingImg && existingImg.complete && existingImg.naturalWidth > 0) return
-
-    const src = embed.getAttribute('src') ?? ''
-    // eslint-disable-next-line @typescript-eslint/prefer-regexp-exec
-    const match = src.match(/^\.eagle\/([^.]+)\.(.+)$/)
-    if (!match) return
-    const [, itemId, ext] = match
-
-    const adapter = this.app.vault.adapter as any
-    const basePath: string = adapter.getBasePath?.() ?? ''
-
-    const dotEaglePath = `.eagle/${itemId}.${ext}`
-    this.app.vault.adapter.exists(dotEaglePath).then((exists) => {
-      if (exists && basePath) {
-        // Backward-compat: serve from .eagle/ dotfolder directly
-        const osPath = `${basePath}/${dotEaglePath}`
-        embed.empty()
-        const img = embed.createEl('img')
-        img.src = fileUrlToDisplayUrl(filePathToFileUrl(osPath))
-      } else {
-        // Fall back to Eagle API
-        this._eagleUploader.getFileUrlForItemId(itemId).then((url) => {
-          if (!url.startsWith('file://')) return
-          embed.empty()
-          const img = embed.createEl('img')
-          img.src = fileUrlToDisplayUrl(url)
-        }).catch((err) => {
-          console.debug('Eagle: could not resolve embed via API', { itemId, ext, err })
-        })
-      }
-    }).catch((err) => {
-      console.error('Eagle: exists check failed unexpectedly', { itemId, ext, err })
-    })
   }
 
   private registerEagleImageRenderer(): void {
@@ -525,68 +481,26 @@ export default class EaglePlugin extends Plugin {
           EaglePlugin.eagleItemIdFromLink(img.getAttribute('src') ?? '')
         if (!itemId) return
 
-        const recoverImage = () => {
-          this._eagleUploader.getFileUrlForItemId(itemId).then((url) => {
+        const recoverImage = async () => {
+          try {
+            const url = await this._eagleUploader.getFileUrlForItemId(itemId)
             if (url.startsWith('file://')) img.src = fileUrlToDisplayUrl(url)
-          }).catch((err) => {
+          } catch (err) {
             if (!(err instanceof EagleApiError)) {
               console.error('Eagle: unexpected error during image recovery', { itemId, err })
             }
-          })
+          }
         }
 
         // Image already failed before this handler was registered
         if (img.complete && img.naturalWidth === 0 && img.src) {
-          recoverImage()
+          void recoverImage()
           return
         }
 
         img.addEventListener('error', recoverImage, { once: true })
       })
-
-      // Reading mode only — post-processor fires for rendered output.
-      // Live preview is covered by the MutationObserver below.
-      el.querySelectorAll<HTMLElement>('.internal-embed[src^=".eagle/"]').forEach((embed) => {
-        this.processEagleWikilinkEmbed(embed)
-      })
     })
-
-    // Live preview (CM6 editor) doesn't run markdown post-processors.
-    // A MutationObserver on the workspace catches embeds as they're added to the DOM,
-    // covering real-time edits. We also scan on plugin load and on leaf/layout changes
-    // to handle notes that were already open or newly opened.
-    const scanEl = (root: HTMLElement) => {
-      root.querySelectorAll<HTMLElement>('.internal-embed[src^=".eagle/"]').forEach((embed) => {
-        this.processEagleWikilinkEmbed(embed)
-      })
-    }
-
-    // The MutationObserver also fires in reading mode; double-processing is prevented
-    // by the early-exit guard in processEagleWikilinkEmbed (checks img.complete + naturalWidth).
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const node of mutation.addedNodes) {
-          if (!(node instanceof HTMLElement)) continue
-          try {
-            if (node.matches('.internal-embed[src^=".eagle/"]')) {
-              this.processEagleWikilinkEmbed(node)
-            } else {
-              scanEl(node)
-            }
-          } catch (err) {
-            console.error('Eagle: error processing mutation node', { node, err })
-          }
-        }
-      }
-    })
-    observer.observe(this.app.workspace.containerEl, { childList: true, subtree: true })
-    this.register(() => observer.disconnect())
-
-    // Scan already-visible embeds on load and whenever the active leaf changes
-    this.app.workspace.onLayoutReady(() => scanEl(this.app.workspace.containerEl))
-    this.registerEvent(
-      this.app.workspace.on('active-leaf-change', () => scanEl(this.app.workspace.containerEl)),
-    )
   }
 
   private editorCheckCallbackForLocalUpload = (

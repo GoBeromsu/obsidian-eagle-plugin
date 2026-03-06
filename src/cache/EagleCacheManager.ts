@@ -19,6 +19,12 @@ export default class EagleCacheManager {
     return this.app.vault.adapter.exists(this.cachedVaultPath(itemId, ext))
   }
 
+  async removeCache(itemId: string, ext: string): Promise<void> {
+    if (await this.isCached(itemId, ext)) {
+      await this.app.vault.adapter.remove(this.cachedVaultPath(itemId, ext))
+    }
+  }
+
   async ensureCacheFolder(): Promise<void> {
     if (this.ensureFolderPromise === null) {
       this.ensureFolderPromise = (async () => {

@@ -98,6 +98,19 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
           }),
       )
 
+    new Setting(containerEl)
+      .setName('Cache folder name')
+      .setDesc("Images are cached here. After changing, run 'Eagle: Migrate all images to eagle-cache' command.")
+      .addText((text) =>
+        text
+          .setPlaceholder('eagle-cache')
+          .setValue(this.plugin.settings.cacheFolderName)
+          .onChange((value) => {
+            this.plugin.settings.cacheFolderName = value.trim() || 'eagle-cache'
+            void this.plugin.saveSettings()
+          }),
+      )
+
     this.renderFolderMappingsSection(containerEl)
   }
 

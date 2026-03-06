@@ -1,17 +1,18 @@
 import { App } from 'obsidian'
 
 export default class EagleCacheManager {
-  readonly CACHE_FOLDER = '.eagle'
+  readonly cacheFolder: string
   private readonly app: App
   // Singleton promise so concurrent callers all await the same mkdir operation.
   private ensureFolderPromise: Promise<void> | null = null
 
-  constructor(app: App) {
+  constructor(app: App, cacheFolder: string) {
     this.app = app
+    this.cacheFolder = cacheFolder
   }
 
   cachedVaultPath(itemId: string, ext: string): string {
-    return `${this.CACHE_FOLDER}/${itemId}.${ext}`
+    return `${this.cacheFolder}/${itemId}.${ext}`
   }
 
   async isCached(itemId: string, ext: string): Promise<boolean> {
@@ -22,10 +23,13 @@ export default class EagleCacheManager {
     if (this.ensureFolderPromise === null) {
       this.ensureFolderPromise = (async () => {
         const { adapter } = this.app.vault
-        if (!(await adapter.exists(this.CACHE_FOLDER))) {
-          await adapter.mkdir(this.CACHE_FOLDER)
+        if (!(await adapter.exists(this.cacheFolder))) {
+          await adapter.mkdir(this.cacheFolder)
         }
-      })()
+      })().catch((err) => {
+        this.ensureFolderPromise = null // allow retry on next call
+        throw err
+      })
     }
     return this.ensureFolderPromise
   }

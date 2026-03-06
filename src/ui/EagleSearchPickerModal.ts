@@ -4,7 +4,6 @@ import EagleApiError from '../uploader/EagleApiError'
 import EagleUploader, { EagleItemSearchResult } from '../uploader/EagleUploader'
 import { fileUrlToDisplayUrl } from '../utils/file-url'
 
-const SEARCH_DEBOUNCE_MS = 300
 const SEARCH_RESULT_LIMIT = 100
 const THUMBNAIL_CONCURRENCY = 6
 
@@ -14,6 +13,7 @@ export default class EagleSearchPickerModal extends Modal {
   private readonly uploader: EagleUploader
   private readonly onChoose: (item: EagleItemSearchResult) => void
   private readonly debugSearchDiagnostics: boolean
+  private readonly debounceMs: number
 
   private keywordInput: TextComponent
   private statusEl: HTMLElement
@@ -29,11 +29,13 @@ export default class EagleSearchPickerModal extends Modal {
     uploader: EagleUploader,
     onChoose: (item: EagleItemSearchResult) => void,
     debugSearchDiagnostics: boolean,
+    debounceMs = 300,
   ) {
     super(app)
     this.uploader = uploader
     this.onChoose = onChoose
     this.debugSearchDiagnostics = debugSearchDiagnostics
+    this.debounceMs = debounceMs
     this.setTitle('Search Eagle library')
   }
 
@@ -115,7 +117,7 @@ export default class EagleSearchPickerModal extends Modal {
     this.debounceTimer = setTimeout(() => {
       this.debounceTimer = null
       void this.runSearch()
-    }, SEARCH_DEBOUNCE_MS)
+    }, this.debounceMs)
   }
 
   private async runSearch(): Promise<void> {

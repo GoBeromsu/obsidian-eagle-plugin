@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-import { DEFAULT_SETTINGS } from '../src/plugin-settings'
 import {
   detectImageFormat,
   isLikelyImageFile,
@@ -73,7 +72,7 @@ describe(isLikelyImageFile, () => {
 })
 
 describe('normalizeImageForUpload', () => {
-  it('throws when conversion is required but runtime conversion API is unavailable', async () => {
+  it('passes non-renderable files through as-is (Eagle handles natively)', async () => {
     const heicSignature = [
       0x00,
       0x00,
@@ -96,10 +95,16 @@ describe('normalizeImageForUpload', () => {
     const file = new File([new Uint8Array(heicSignature)], 'photo.heic', {
       type: 'image/heic',
     })
+    const result = await normalizeImageForUpload(file)
+    expect(result.name).toBe('photo.heic')
+    expect(result.type).toBe('image/heic')
+  })
 
-    await expect(normalizeImageForUpload(file, DEFAULT_SETTINGS)).rejects.toThrow(
-      'Canvas conversion is not available',
-    )
+  it('passes completely unrecognized files through unchanged', async () => {
+    const file = new File([new Uint8Array([0xde, 0xad, 0xbe, 0xef])], 'data.bin', { type: '' })
+    const result = await normalizeImageForUpload(file)
+    expect(result.name).toBe('data.bin')
+    expect(result.type).toBe('')
   })
 
   it('keeps renderable files with valid signatures', async () => {
@@ -124,7 +129,7 @@ describe('normalizeImageForUpload', () => {
     const file = new File([new Uint8Array(pngSignature)], 'existing.png', {
       type: 'image/png',
     })
-    const normalized = await normalizeImageForUpload(file, DEFAULT_SETTINGS)
+    const normalized = await normalizeImageForUpload(file)
     expect(normalized.type).toBe('image/png')
     expect(normalized.name).toBe('existing.png')
   })

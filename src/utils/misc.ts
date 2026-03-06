@@ -1,12 +1,8 @@
 import { EditorPosition, ReferenceCache } from 'obsidian'
 
-import { EaglePluginSettings, FallbackImageFormat } from '../plugin-settings'
 import {
-  canonicalImageExtensionForFormat,
   detectImageFormat,
-  isKnownImageExtension,
   isRenderableImageExtension,
-  mimeTypeForFallbackFormat,
   replaceFileExtension,
 } from './image-format'
 
@@ -21,93 +17,6 @@ function normalizeImageForBrowser(image: File): File {
 
   return new File([image], image.name, {
     type: image.type,
-    lastModified: image.lastModified,
-  })
-}
-
-function clampNumber(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value))
-}
-
-async function decodeImageElement(image: File): Promise<HTMLImageElement> {
-  const element = new Image()
-  const objectUrl = URL.createObjectURL(image)
-
-  try {
-    await new Promise<void>((resolve, reject) => {
-      element.onload = () => resolve()
-      element.onerror = () => reject(new Error('Failed to decode image for conversion'))
-      element.src = objectUrl
-    })
-
-    return element
-  } finally {
-    URL.revokeObjectURL(objectUrl)
-  }
-}
-
-function hasClose(resource: ImageBitmap | HTMLImageElement): resource is ImageBitmap {
-  return 'close' in resource && typeof resource.close === 'function'
-}
-
-async function convertImageToFormat(
-  image: File,
-  format: FallbackImageFormat,
-  quality: number,
-): Promise<File> {
-  if (typeof document === 'undefined' || !document.createElement) {
-    throw new Error('Canvas conversion is not available in this runtime')
-  }
-
-  const fileMimeType = mimeTypeForFallbackFormat(format)
-  if (!fileMimeType) {
-    throw new Error(`Unsupported conversion format: ${format}`)
-  }
-
-  let source: ImageBitmap | HTMLImageElement
-  try {
-    if (typeof createImageBitmap === 'function') {
-      source = await createImageBitmap(image)
-    } else {
-      source = await decodeImageElement(image)
-    }
-  } catch {
-    source = await decodeImageElement(image)
-  }
-
-  const { width, height } = source
-  const canvas = document.createElement('canvas')
-  const ctx = canvas.getContext('2d')
-  if (!ctx) {
-    if (hasClose(source)) {
-      source.close()
-    }
-    throw new Error('Unable to get 2D context for image conversion')
-  }
-
-  canvas.width = width
-  canvas.height = height
-
-  // eslint-disable-next-line @typescript-eslint/no-base-to-string
-  ctx.drawImage(source, 0, 0)
-
-  if (hasClose(source)) {
-    source.close()
-  }
-
-  const extension = canonicalImageExtensionForFormat(format)
-  const convertedName = replaceFileExtension(image.name, extension)
-  const normalizedQuality = clampNumber(quality, 0, 1)
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, fileMimeType, format === 'jpeg' ? normalizedQuality : undefined),
-  )
-
-  if (!blob) {
-    throw new Error(`Failed to convert image to ${format}`)
-  }
-
-  return new File([blob], convertedName, {
-    type: fileMimeType,
     lastModified: image.lastModified,
   })
 }
@@ -142,28 +51,23 @@ function ensureTypeAndExtensionMatch(
   })
 }
 
-export async function normalizeImageForUpload(image: File, settings: EaglePluginSettings): Promise<File> {
+export async function normalizeImageForUpload(image: File): Promise<File> {
   const normalized = normalizeImageForBrowser(image)
   const detected = detectImageFormat(await normalized.arrayBuffer(), normalized.name, normalized.type)
-
-  const shouldAttemptConversion =
-    isKnownImageExtension(detected.extension) ||
-    (detected.source === 'signature' && Boolean(detected.extension)) ||
-    normalized.type.startsWith('image/')
 
   if (detected.recognized && isRenderableImageExtension(detected.extension)) {
     return ensureTypeAndExtensionMatch(normalized, detected)
   }
 
-  if (!shouldAttemptConversion) {
-    return normalized
+  // Eagle handles native formats (HEIC, TIFF, etc.) natively — no conversion needed.
+  // Log unrecognized formats so upload failures are easier to trace.
+  if (!detected.recognized) {
+    console.warn('Eagle: image format not recognized, passing to Eagle as-is', {
+      name: image.name,
+      type: image.type,
+    })
   }
-
-  return convertImageToFormat(
-    normalized,
-    settings.fallbackImageFormat,
-    settings.conversionQualityForJpeg,
-  )
+  return normalized
 }
 
 function removeReferenceIfPresent(

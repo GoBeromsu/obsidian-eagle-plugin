@@ -1,5 +1,3 @@
-import { FallbackImageFormat } from '../plugin-settings'
-
 const HEIC_SIGNATURE_BRANDS = new Set(['heic', 'heix', 'hevc', 'heim', 'heis', 'hevm'])
 const HEIF_SIGNATURE_BRANDS = new Set(['mif1', 'msf1'])
 const AVIF_SIGNATURE_BRANDS = new Set(['avif'])
@@ -21,8 +19,6 @@ const KNOWN_IMAGE_EXTENSIONS = new Set([
   'svg',
   'webp',
 ])
-
-const CONVERSION_TARGET_FORMATS = new Set<FallbackImageFormat>(['jpeg', 'png', 'webp'])
 
 export type ImageFormatDetectionSource = 'signature' | 'mime' | 'extension' | 'fallback'
 
@@ -201,27 +197,6 @@ export function isLikelyImageFile(file: { type?: string; name: string }) {
   if (mime.startsWith('image/')) return true
 
   return isKnownImageExtension(extractFileExtension(file.name))
-}
-
-export function isConversionSafeTarget(format: string) {
-  return CONVERSION_TARGET_FORMATS.has(normalizeExtension(format) as FallbackImageFormat)
-}
-
-export function canonicalImageExtensionForFormat(format: string) {
-  const normalized = normalizeExtension(format)
-  if (normalized === 'jpeg') return 'jpg'
-  return normalized
-}
-
-export function mimeTypeForFallbackFormat(format: FallbackImageFormat) {
-  switch (format) {
-    case 'jpeg':
-      return 'image/jpeg'
-    case 'png':
-      return 'image/png'
-    case 'webp':
-      return 'image/webp'
-  }
 }
 
 export function replaceFileExtension(fileName: string, extension: string) {

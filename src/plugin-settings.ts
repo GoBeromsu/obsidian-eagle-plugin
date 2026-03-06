@@ -1,5 +1,3 @@
-export type FallbackImageFormat = 'jpeg' | 'png' | 'webp'
-
 export interface ObsidianEagleFolderMapping {
   obsidianFolder: string
   eagleFolder: string
@@ -11,10 +9,9 @@ export interface EaglePluginSettings {
   eagleFolderName: string
   folderMappings: ObsidianEagleFolderMapping[]
   debugSearchDiagnostics: boolean
-  fallbackImageFormat: FallbackImageFormat
-  conversionQualityForJpeg: number
   cacheFolderName: string
   deduplicateUploads: boolean
+  searchDebounceMs: number
 }
 
 export const DEFAULT_SETTINGS: EaglePluginSettings = {
@@ -23,8 +20,7 @@ export const DEFAULT_SETTINGS: EaglePluginSettings = {
   eagleFolderName: '',
   folderMappings: [],
   debugSearchDiagnostics: false,
-  fallbackImageFormat: 'jpeg',
-  conversionQualityForJpeg: 0.9,
   cacheFolderName: 'eagle-cache',
   deduplicateUploads: true,
+  searchDebounceMs: 300,
 }

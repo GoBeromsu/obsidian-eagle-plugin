@@ -726,34 +726,33 @@ export default class EaglePlugin extends Plugin {
       }),
     )
 
-    // Step 2: Move cached files from oldFolder to newFolder
+    // Step 2: Move cached files from oldFolder to newFolder (OS-level rename, no I/O)
     this._cacheManager = new EagleCacheManager(this.app, newFolder)
 
     let movedFiles = 0
     try {
       const listed = await this.app.vault.adapter.list(oldFolder)
+      await this._cacheManager.ensureCacheFolder()
       await Promise.allSettled(
         listed.files.map(async (srcPath) => {
           const fileName = srcPath.split('/').pop()!
-          const dotIdx = fileName.indexOf('.')
-          if (dotIdx === -1) return
-          const itemId = fileName.slice(0, dotIdx)
-          const ext = fileName.slice(dotIdx + 1)
+          const destPath = `${newFolder}/${fileName}`
           try {
-            const data = await this.app.vault.adapter.readBinary(srcPath)
-            await this._cacheManager.cacheFromBuffer(itemId, ext, data)
+            await this.app.vault.adapter.rename(srcPath, destPath)
             movedFiles++
           } catch (err) {
             console.warn('Eagle: failed to move cache file', { srcPath, err })
           }
         }),
       )
+      // Remove the now-empty old folder
+      await this.app.vault.adapter.rmdir(oldFolder, false).catch(() => {/* ignore if not empty */})
     } catch {
       // oldFolder doesn't exist or is empty — that's fine
     }
 
     new Notice(
-      `Eagle: Renamed cache folder. Updated ${updatedLinks} link(s) in ${updatedFiles} file(s), moved ${movedFiles} file(s). Old folder '${oldFolder}' can be deleted manually.`,
+      `Eagle: Moved cache to '${newFolder}'. Updated ${updatedLinks} link(s) in ${updatedFiles} file(s), moved ${movedFiles} file(s).`,
       10000,
     )
   }

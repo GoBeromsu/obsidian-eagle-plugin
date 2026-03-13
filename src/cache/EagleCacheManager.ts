@@ -1,5 +1,10 @@
 import { App } from 'obsidian'
 
+export interface CacheStats {
+  fileCount: number
+  totalSizeBytes: number
+}
+
 export default class EagleCacheManager {
   readonly cacheFolder: string
   private readonly app: App
@@ -45,6 +50,32 @@ export default class EagleCacheManager {
       })
     }
     return this.ensureFolderPromise
+  }
+
+  async getCacheStats(): Promise<CacheStats> {
+    const { adapter } = this.app.vault
+    const exists = await adapter.exists(this.cacheFolder)
+    if (!exists) return { fileCount: 0, totalSizeBytes: 0 }
+
+    let fileCount = 0
+    let totalSizeBytes = 0
+
+    try {
+      const listed = await adapter.list(this.cacheFolder)
+      await Promise.allSettled(
+        listed.files.map(async (filePath) => {
+          const stat = await adapter.stat(filePath)
+          if (stat) {
+            fileCount++
+            totalSizeBytes += stat.size
+          }
+        }),
+      )
+    } catch {
+      // Cache folder unreadable — return what we have so far
+    }
+
+    return { fileCount, totalSizeBytes }
   }
 
   async cacheFromBuffer(itemId: string, ext: string, data: ArrayBuffer): Promise<void> {

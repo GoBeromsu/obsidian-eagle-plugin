@@ -23,6 +23,15 @@ function resolveVaultFolderPath(folder: TFolder): string {
   return folder.path === '/' ? '' : folder.path
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(1024))
+  const clamped = Math.min(i, units.length - 1)
+  const value = bytes / Math.pow(1024, clamped)
+  return `${value % 1 === 0 ? value.toString() : value.toFixed(1)} ${units[clamped]}`
+}
+
 export default class EaglePluginSettingsTab extends PluginSettingTab {
   plugin: EaglePlugin
   private originalCacheFolderName = ''
@@ -178,6 +187,35 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
           }).open()
         })
       })
+
+    // ── Cache health ─────────────────────────────────────────────────────────
+    const healthSetting = new Setting(containerEl)
+      .setName('Cache status')
+      .setDesc('Loading...')
+      .addButton((btn) =>
+        btn.setButtonText('Refresh').onClick(async () => {
+          btn.setDisabled(true)
+          await refreshCacheStats()
+          btn.setDisabled(false)
+        }),
+      )
+      .addButton((btn) =>
+        btn.setButtonText('Open folder').onClick(() => {
+          const adapter = this.app.vault.adapter as { getBasePath?: () => string }
+          const basePath = typeof adapter.getBasePath === 'function' ? adapter.getBasePath() : ''
+          const folderPath = basePath
+            ? `${basePath}/${this.plugin.settings.cacheFolderName}`
+            : this.plugin.settings.cacheFolderName
+          window.open(`file://${folderPath}`)
+        }),
+      )
+
+    const refreshCacheStats = async () => {
+      const stats = await this.plugin.cacheManager.getCacheStats()
+      healthSetting.setDesc(`${stats.fileCount} files, ${formatBytes(stats.totalSizeBytes)}`)
+    }
+
+    void refreshCacheStats()
 
     // ── Folder Mapping ───────────────────────────────────────────────────────
     this.renderFolderMappingsSection(containerEl, eagleFoldersPromise)

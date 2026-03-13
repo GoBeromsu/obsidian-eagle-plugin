@@ -25,11 +25,12 @@ function currentDateString(): string {
  * Falls back to the original name when the resolved string is empty.
  */
 export function resolveItemName(template: string, context: ItemNameContext): string {
+  const uuid = generatePseudoRandomId()
   const resolved = template
-    .replace('{originalName}', context.originalName)
-    .replace('{noteName}', context.noteName)
-    .replace('{date}', currentDateString())
-    .replace('{uuid}', generatePseudoRandomId())
+    .replaceAll('{originalName}', context.originalName)
+    .replaceAll('{noteName}', context.noteName)
+    .replaceAll('{date}', currentDateString())
+    .replaceAll('{uuid}', uuid)
     .trim()
 
   return resolved || context.originalName

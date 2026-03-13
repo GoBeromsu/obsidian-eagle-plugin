@@ -41,4 +41,9 @@ describe('resolveItemName', () => {
     const result = resolveItemName('{unknown}', CONTEXT)
     expect(result).toBe('{unknown}')
   })
+
+  it('replaces all occurrences of the same token', () => {
+    const result = resolveItemName('{originalName}-{originalName}', CONTEXT)
+    expect(result).toBe('my-photo-my-photo')
+  })
 })

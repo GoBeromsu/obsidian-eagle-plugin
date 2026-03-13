@@ -128,6 +128,18 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
           }),
       )
 
+    new Setting(containerEl)
+      .setName('Deduplicate uploads')
+      .setDesc('Skip uploading images that already exist in Eagle (matched by file hash).')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.deduplicateUploads)
+          .onChange(async (value) => {
+            this.plugin.settings.deduplicateUploads = value
+            await this.plugin.saveSettings()
+          }),
+      )
+
     // Fetch Eagle folders once; used by Upload dropdown + Folder Mapping rows
     const eagleFoldersPromise = this.fetchEagleFolders(statusBadge)
 

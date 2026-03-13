@@ -11,6 +11,7 @@ import {
 } from 'obsidian'
 
 import EagleCacheManager from './cache/EagleCacheManager'
+import EagleHashStore from './cache/EagleHashStore'
 import { createEagleCanvasPasteHandler } from './Canvas'
 import { DEFAULT_SETTINGS, EaglePluginSettings } from './plugin-settings'
 import EaglePluginSettingsTab from './ui/EaglePluginSettingsTab'
@@ -69,6 +70,7 @@ export default class EaglePlugin extends Plugin {
   }
 
   private _cacheManager: EagleCacheManager
+  private _hashStore: EagleHashStore
   private _syncDebounceTimer: ReturnType<typeof setTimeout> | null = null
   private _lastSyncedFilePath: string | null = null
 
@@ -201,7 +203,8 @@ export default class EaglePlugin extends Plugin {
 
   async saveSettings(): Promise<void> {
     this._settings.folderMappings = sanitizeFolderMappings(this._settings.folderMappings ?? [])
-    await this.saveData(this._settings)
+    const existing = ((await this.loadData()) as Record<string, unknown>) ?? {}
+    await this.saveData({ ...existing, ...this._settings })
   }
 
   override onload() {
@@ -214,6 +217,8 @@ export default class EaglePlugin extends Plugin {
 
     this.setupEagleUploader()
     this._cacheManager = new EagleCacheManager(this.app, this._settings.cacheFolderName)
+    this._hashStore = new EagleHashStore()
+    await this._hashStore.load(this)
     this.setupEagleHandlers()
     this.addUploadLocalCommand()
     this.addImportFromEagleLibraryCommand()
@@ -592,6 +597,31 @@ export default class EaglePlugin extends Plugin {
       const originalName = file.name.replace(/\.[^.]+$/, '')
       const noteName = this.app.workspace.getActiveFile()?.basename ?? ''
       const displayName = resolveItemName(this._settings.uploadItemNameTemplate, { originalName, noteName })
+
+      // Deduplication: check if this file was already uploaded to Eagle
+      if (this._settings.deduplicateUploads) {
+        const buffer = await normalizedFile.arrayBuffer()
+        const hash = await EagleHashStore.computeHash(buffer)
+        const libraryPath = await this._eagleUploader.getLibraryRootPath(controller.signal)
+        if (libraryPath) {
+          const existingItemId = this._hashStore.lookup(hash, libraryPath)
+          if (existingItemId) {
+            new Notice('Eagle: duplicate detected, reusing existing item')
+            const fileUrl = await this._eagleUploader.getFileUrlForItemId(existingItemId, controller.signal)
+            const ext = fileUrl.startsWith('file://') ? (extractFileExtension(fileUrl) || 'jpg') : 'jpg'
+            if (fileUrl.startsWith('file://')) {
+              await this._cacheManager.cacheFromOsPath(existingItemId, ext, fileUrlToOsPath(fileUrl)).catch((e) => {
+                console.warn('Eagle: cache write failed — image may appear broken', e)
+              })
+            }
+            markdownImage = this.markdownImageFor(existingItemId, ext)
+            this.embedMarkDownImage(pasteId, markdownImage)
+            modal.close()
+            return markdownImage
+          }
+        }
+      }
+
       const { itemId, fileUrl, ext } = await this._eagleUploader.upload(normalizedFile, { folderName, signal: controller.signal, displayName })
 
       if (fileUrl.startsWith('file://')) {
@@ -599,6 +629,22 @@ export default class EaglePlugin extends Plugin {
           console.warn('Eagle: cache write failed — image may appear broken', e)
         })
       }
+
+      // Store hash for future deduplication
+      if (this._settings.deduplicateUploads) {
+        try {
+          const buffer = await normalizedFile.arrayBuffer()
+          const hash = await EagleHashStore.computeHash(buffer)
+          const libraryPath = await this._eagleUploader.getLibraryRootPath()
+          if (libraryPath) {
+            this._hashStore.store(hash, itemId, libraryPath)
+            await this._hashStore.save(this)
+          }
+        } catch (hashErr) {
+          console.warn('Eagle: failed to store upload hash', hashErr)
+        }
+      }
+
       markdownImage = this.markdownImageFor(itemId, ext)
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') {

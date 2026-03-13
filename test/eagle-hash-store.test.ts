@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import EagleHashStore from '../src/cache/EagleHashStore'
 
@@ -10,9 +10,10 @@ import EagleHashStore from '../src/cache/EagleHashStore'
 function createPluginMock(initialData: Record<string, unknown> = {}) {
   let store = { ...initialData }
   return {
-    loadData: vi.fn(async () => ({ ...store })),
-    saveData: vi.fn(async (data: Record<string, unknown>) => {
+    loadData: vi.fn(() => Promise.resolve({ ...store })),
+    saveData: vi.fn((data: Record<string, unknown>) => {
       store = { ...data }
+      return Promise.resolve()
     }),
     _getStore: () => store,
   }
@@ -20,7 +21,7 @@ function createPluginMock(initialData: Record<string, unknown> = {}) {
 
 /** Create an ArrayBuffer from a UTF-8 string — useful for deterministic test inputs. */
 function bufferFrom(text: string): ArrayBuffer {
-  return new TextEncoder().encode(text).buffer as ArrayBuffer
+  return new TextEncoder().encode(text).buffer
 }
 
 // ---------------------------------------------------------------------------

@@ -22,6 +22,7 @@ export default class ImageUploadBlockingModal extends Modal {
   }
 
   showError(message: string): void {
+    if (!this.isOpen) return
     this.contentEl.setText(message)
     this.buttonsDiv.empty()
     new ButtonComponent(this.buttonsDiv)

@@ -113,6 +113,21 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
         }),
     )
 
+    new Setting(containerEl)
+      .setName('Item name template')
+      .setDesc(
+        'Name given to each uploaded item in Eagle. Available tokens: {originalName} (filename without extension), {noteName} (active note), {date} (YYYY-MM-DD), {uuid} (short random ID). Falls back to {originalName} if empty.',
+      )
+      .addText((text) =>
+        text
+          .setPlaceholder('{originalName}')
+          .setValue(this.plugin.settings.uploadItemNameTemplate)
+          .onChange((value) => {
+            this.plugin.settings.uploadItemNameTemplate = value
+            void this.plugin.saveSettings()
+          }),
+      )
+
     // Fetch Eagle folders once; used by Upload dropdown + Folder Mapping rows
     const eagleFoldersPromise = this.fetchEagleFolders(statusBadge)
 

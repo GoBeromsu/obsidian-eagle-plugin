@@ -1,0 +1,36 @@
+import { generatePseudoRandomId } from '../utils/pseudo-random'
+
+export interface ItemNameContext {
+  originalName: string
+  noteName: string
+}
+
+function currentDateString(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * Resolve the Eagle item name from a template string.
+ *
+ * Supported tokens:
+ *   {originalName} — original filename without extension
+ *   {noteName}     — active note basename
+ *   {date}         — YYYY-MM-DD (today)
+ *   {uuid}         — short random ID (5 chars)
+ *
+ * Falls back to the original name when the resolved string is empty.
+ */
+export function resolveItemName(template: string, context: ItemNameContext): string {
+  const resolved = template
+    .replace('{originalName}', context.originalName)
+    .replace('{noteName}', context.noteName)
+    .replace('{date}', currentDateString())
+    .replace('{uuid}', generatePseudoRandomId())
+    .trim()
+
+  return resolved || context.originalName
+}

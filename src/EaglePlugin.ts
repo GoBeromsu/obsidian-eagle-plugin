@@ -20,6 +20,7 @@ import InfoModal from './ui/InfoModal'
 import UpdateLinksConfirmationModal from './ui/UpdateLinksConfirmationModal'
 import EagleApiError from './uploader/EagleApiError'
 import EagleUploader, { type EagleItemSearchResult } from './uploader/EagleUploader'
+import { resolveItemName } from './uploader/item-naming'
 import { findLocalFileUnderCursor, replaceFirstOccurrence } from './utils/editor'
 import { fileUrlToDisplayUrl, fileUrlToOsPath } from './utils/file-url'
 import { allFilesAreImages } from './utils/FileList'
@@ -588,7 +589,10 @@ export default class EaglePlugin extends Plugin {
     try {
       const folderName = this.resolveTargetEagleFolderForActiveFile()
       const normalizedFile = await normalizeImageForUpload(file)
-      const { itemId, fileUrl, ext } = await this._eagleUploader.upload(normalizedFile, { folderName, signal: controller.signal })
+      const originalName = file.name.replace(/\.[^.]+$/, '')
+      const noteName = this.app.workspace.getActiveFile()?.basename ?? ''
+      const displayName = resolveItemName(this._settings.uploadItemNameTemplate, { originalName, noteName })
+      const { itemId, fileUrl, ext } = await this._eagleUploader.upload(normalizedFile, { folderName, signal: controller.signal, displayName })
 
       if (fileUrl.startsWith('file://')) {
         await this._cacheManager.cacheFromOsPath(itemId, ext, fileUrlToOsPath(fileUrl)).catch((e) => {

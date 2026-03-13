@@ -66,8 +66,8 @@ describe(EagleUploader.name, () => {
     const uploader = createUploaderForTest()
     const uploaderInternals = uploader as unknown as {
       saveToTempFile: (image: File) => Promise<string>
-      ensureFolderExists: (name: string) => Promise<string>
-      addToEagle: (filePath: string, folderId: string | undefined) => Promise<string>
+      ensureFolderExists: (name: string, signal?: AbortSignal) => Promise<string>
+      addToEagle: (filePath: string, folderId: string | undefined, signal?: AbortSignal) => Promise<string>
       getFileUrlForItemId: (itemId: string) => Promise<string>
     }
 
@@ -83,8 +83,8 @@ describe(EagleUploader.name, () => {
     const result = await uploadPromise
 
     expect(saveSpy).toHaveBeenCalledOnce()
-    expect(ensureSpy).toHaveBeenCalledWith('Mapped Folder')
-    expect(addSpy).toHaveBeenCalledWith('/tmp/test.png', 'mapped-folder-id')
+    expect(ensureSpy).toHaveBeenCalledWith('Mapped Folder', undefined)
+    expect(addSpy).toHaveBeenCalledWith('/tmp/test.png', 'mapped-folder-id', undefined)
     expect(fileUrlSpy).toHaveBeenCalledWith('item-1')
     expect(result).toEqual({
       itemId: 'item-1',

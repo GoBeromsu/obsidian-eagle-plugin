@@ -62,6 +62,7 @@ export interface EagleUploadResult {
 
 export interface EagleUploadOptions {
   folderName?: string
+  signal?: AbortSignal
 }
 
 interface EagleListResponse {
@@ -98,8 +99,10 @@ export default class EagleUploader {
     this.settings = settings
   }
 
-  private async requestJson<T>(url: string, method: 'GET' | 'POST', body?: string): Promise<T> {
+  private async requestJson<T>(url: string, method: 'GET' | 'POST', body?: string, signal?: AbortSignal): Promise<T> {
     try {
+      if (signal?.aborted) throw new DOMException('Upload cancelled', 'AbortError')
+
       const headers = method === 'POST'
         ? { 'Content-Type': 'application/json' }
         : undefined
@@ -112,6 +115,8 @@ export default class EagleUploader {
         throw: false,
       })
 
+      if (signal?.aborted) throw new DOMException('Upload cancelled', 'AbortError')
+
       if (resp.status < 200 || resp.status >= 300) {
         const responseMessage = this.extractResponseMessage(resp.json)
           || this.extractTextMessage(resp)
@@ -121,6 +126,9 @@ export default class EagleUploader {
 
       return resp.json as T
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw error
+      }
       if (error instanceof EagleApiError) {
         throw error
       }
@@ -156,17 +164,33 @@ export default class EagleUploader {
   }
 
   async upload(image: File, options?: EagleUploadOptions): Promise<EagleUploadResult> {
+    const signal = options?.signal
     const tempFilePath = await this.saveToTempFile(image)
-    const targetFolderName = options?.folderName?.trim() || this.settings.eagleFolderName.trim()
 
-    let folderId: string | undefined
-    if (targetFolderName) {
-      folderId = await this.ensureFolderExists(targetFolderName)
-    }
-
-    let itemId: string
     try {
-      itemId = await this.addToEagle(tempFilePath, folderId)
+      const targetFolderName = options?.folderName?.trim() || this.settings.eagleFolderName.trim()
+
+      let folderId: string | undefined
+      if (targetFolderName) {
+        folderId = await this.ensureFolderExists(targetFolderName, signal)
+      }
+
+      const itemId = await this.addToEagle(tempFilePath, folderId, signal)
+
+      if (signal?.aborted) throw new DOMException('Upload cancelled', 'AbortError')
+
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, EAGLE_PROCESSING_DELAY_MS)
+        signal?.addEventListener('abort', () => {
+          clearTimeout(timer)
+          reject(new DOMException('Upload cancelled', 'AbortError'))
+        }, { once: true })
+      })
+
+      const fileUrl = await this.getFileUrlForItemId(itemId)
+      const extFromUrl = fileUrl.startsWith('file://') ? extractFileExtension(fileUrl) : ''
+      const ext = extFromUrl || extractFileExtension(image.name) || 'jpg'
+      return { itemId, fileUrl, ext }
     } finally {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const fs = (this.app.vault?.adapter as any)?.fs
@@ -179,12 +203,6 @@ export default class EagleUploader {
         })
       }
     }
-
-    await new Promise((resolve) => setTimeout(resolve, EAGLE_PROCESSING_DELAY_MS))
-    const fileUrl = await this.getFileUrlForItemId(itemId)
-    const extFromUrl = fileUrl.startsWith('file://') ? extractFileExtension(fileUrl) : ''
-    const ext = extFromUrl || extractFileExtension(image.name) || 'jpg'
-    return { itemId, fileUrl, ext }
   }
 
   private async saveToTempFile(image: File): Promise<string> {
@@ -206,7 +224,7 @@ export default class EagleUploader {
     })
   }
 
-  private async addToEagle(filePath: string, folderId: string | undefined): Promise<string> {
+  private async addToEagle(filePath: string, folderId: string | undefined, signal?: AbortSignal): Promise<string> {
     const { eagleHost, eaglePort } = this.settings
     const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.ADD_FROM_PATH}`
 
@@ -220,7 +238,7 @@ export default class EagleUploader {
       body.folderId = folderId
     }
 
-    const data = await this.requestJson<EagleListResponse>(url, 'POST', JSON.stringify(body))
+    const data = await this.requestJson<EagleListResponse>(url, 'POST', JSON.stringify(body), signal)
 
     if (data?.status !== 'success') {
       const errorMsg = data?.message || 'Unknown error'
@@ -327,11 +345,11 @@ export default class EagleUploader {
     throw new EagleApiError(`Cannot load thumbnail for item ${itemId}`)
   }
 
-  private async listFoldersRaw(): Promise<EagleFolder[]> {
+  private async listFoldersRaw(signal?: AbortSignal): Promise<EagleFolder[]> {
     const { eagleHost, eaglePort } = this.settings
     const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.FOLDER_LIST}`
 
-    const data = await this.requestJson<EagleListResponse>(url, 'GET')
+    const data = await this.requestJson<EagleListResponse>(url, 'GET', undefined, signal)
 
     if (data?.status === 'success' && Array.isArray(data?.data)) {
       return this.parseFolderList(data.data)
@@ -373,7 +391,7 @@ export default class EagleUploader {
     return result
   }
 
-  async createFolder(name: string): Promise<string> {
+  async createFolder(name: string, signal?: AbortSignal): Promise<string> {
     const { eagleHost, eaglePort } = this.settings
     const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.FOLDER_CREATE}`
 
@@ -381,6 +399,7 @@ export default class EagleUploader {
       url,
       'POST',
       JSON.stringify({ folderName: name }),
+      signal,
     )
 
     if (data?.status === 'success' && data?.data && typeof data.data === 'object') {
@@ -393,14 +412,14 @@ export default class EagleUploader {
     throw new EagleApiError('Failed to create folder')
   }
 
-  async ensureFolderExists(name: string): Promise<string> {
+  async ensureFolderExists(name: string, signal?: AbortSignal): Promise<string> {
     const cached = this.folderIdCache.get(name)
     if (cached !== undefined) return cached
 
     const inFlight = this.folderIdInFlight.get(name)
     if (inFlight !== undefined) return inFlight
 
-    const resolvePromise = this.resolveFolderId(name)
+    const resolvePromise = this.resolveFolderId(name, signal)
       .then((folderId) => {
         this.folderIdCache.set(name, folderId)
         return folderId
@@ -413,8 +432,8 @@ export default class EagleUploader {
     return resolvePromise
   }
 
-  private async resolveFolderId(name: string): Promise<string> {
-    const rawFolders = await this.listFoldersRaw()
+  private async resolveFolderId(name: string, signal?: AbortSignal): Promise<string> {
+    const rawFolders = await this.listFoldersRaw(signal)
     const flat = this.flattenFolderTree(rawFolders)
 
     // Match strategy:
@@ -430,7 +449,7 @@ export default class EagleUploader {
     if (name.includes('/')) {
       console.warn('Eagle: nested folder path not found in library; creating root folder with literal name', { name })
     }
-    return this.createFolder(name)
+    return this.createFolder(name, signal)
   }
 
   async listFolders(): Promise<EagleFolderWithPath[]> {

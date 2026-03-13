@@ -70,6 +70,11 @@ export default class EaglePlugin extends Plugin {
   }
 
   private _cacheManager: EagleCacheManager
+
+  get cacheManager(): EagleCacheManager {
+    return this._cacheManager
+  }
+
   private _hashStore: EagleHashStore
   private _syncDebounceTimer: ReturnType<typeof setTimeout> | null = null
   private _lastSyncedFilePath: string | null = null

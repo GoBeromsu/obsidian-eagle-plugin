@@ -183,7 +183,9 @@ export default class EaglePlugin extends Plugin {
       ch: 0,
       line: end.line + 1,
     })
-    editor.replaceRange(`<!--${editor.getRange(start, end)}-->`, start, end)
+    if (remoteMarkdownImage) {
+      editor.replaceRange(`<!--${editor.getRange(start, end)}-->`, start, end)
+    }
     return remoteMarkdownImage
   }
 

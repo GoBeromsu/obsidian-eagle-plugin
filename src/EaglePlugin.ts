@@ -203,7 +203,8 @@ export default class EaglePlugin extends Plugin {
 
   async saveSettings(): Promise<void> {
     this._settings.folderMappings = sanitizeFolderMappings(this._settings.folderMappings ?? [])
-    await this.saveData(this._settings)
+    const existing = ((await this.loadData()) as Record<string, unknown>) ?? {}
+    await this.saveData({ ...existing, ...this._settings })
   }
 
   override onload() {
@@ -606,7 +607,6 @@ export default class EaglePlugin extends Plugin {
           const existingItemId = this._hashStore.lookup(hash, libraryPath)
           if (existingItemId) {
             new Notice('Eagle: duplicate detected, reusing existing item')
-            modal.close()
             const fileUrl = await this._eagleUploader.getFileUrlForItemId(existingItemId, controller.signal)
             const ext = fileUrl.startsWith('file://') ? (extractFileExtension(fileUrl) || 'jpg') : 'jpg'
             if (fileUrl.startsWith('file://')) {
@@ -616,6 +616,7 @@ export default class EaglePlugin extends Plugin {
             }
             markdownImage = this.markdownImageFor(existingItemId, ext)
             this.embedMarkDownImage(pasteId, markdownImage)
+            modal.close()
             return markdownImage
           }
         }

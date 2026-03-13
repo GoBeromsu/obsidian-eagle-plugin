@@ -28,6 +28,7 @@ export default {
       'main.js',
       'manifest.json',
       'styles.css',
+      'versions.json',
     ],
   },
 };

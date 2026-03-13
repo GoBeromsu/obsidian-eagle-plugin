@@ -68,7 +68,7 @@ describe(EagleUploader.name, () => {
       saveToTempFile: (image: File) => Promise<string>
       ensureFolderExists: (name: string, signal?: AbortSignal) => Promise<string>
       addToEagle: (filePath: string, folderId: string | undefined, signal?: AbortSignal) => Promise<string>
-      getFileUrlForItemId: (itemId: string) => Promise<string>
+      getFileUrlForItemId: (itemId: string, signal?: AbortSignal) => Promise<string>
     }
 
     const saveSpy = vi.spyOn(uploaderInternals, 'saveToTempFile').mockResolvedValue('/tmp/test.png')
@@ -85,7 +85,7 @@ describe(EagleUploader.name, () => {
     expect(saveSpy).toHaveBeenCalledOnce()
     expect(ensureSpy).toHaveBeenCalledWith('Mapped Folder', undefined)
     expect(addSpy).toHaveBeenCalledWith('/tmp/test.png', 'mapped-folder-id', undefined)
-    expect(fileUrlSpy).toHaveBeenCalledWith('item-1')
+    expect(fileUrlSpy).toHaveBeenCalledWith('item-1', undefined)
     expect(result).toEqual({
       itemId: 'item-1',
       fileUrl: 'file:///Users/me/test.png',

@@ -180,14 +180,18 @@ export default class EagleUploader {
       if (signal?.aborted) throw new DOMException('Upload cancelled', 'AbortError')
 
       await new Promise<void>((resolve, reject) => {
-        const timer = setTimeout(resolve, EAGLE_PROCESSING_DELAY_MS)
-        signal?.addEventListener('abort', () => {
+        const onAbort = () => {
           clearTimeout(timer)
           reject(new DOMException('Upload cancelled', 'AbortError'))
-        }, { once: true })
+        }
+        const timer = setTimeout(() => {
+          signal?.removeEventListener('abort', onAbort)
+          resolve()
+        }, EAGLE_PROCESSING_DELAY_MS)
+        signal?.addEventListener('abort', onAbort, { once: true })
       })
 
-      const fileUrl = await this.getFileUrlForItemId(itemId)
+      const fileUrl = await this.getFileUrlForItemId(itemId, signal)
       const extFromUrl = fileUrl.startsWith('file://') ? extractFileExtension(fileUrl) : ''
       const ext = extFromUrl || extractFileExtension(image.name) || 'jpg'
       return { itemId, fileUrl, ext }
@@ -272,14 +276,14 @@ export default class EagleUploader {
     return resolveEagleThumbnailUrl(rawThumbnail, eagleHost, eaglePort)
   }
 
-  async getFileUrlForItemId(itemId: string): Promise<string> {
+  async getFileUrlForItemId(itemId: string, signal?: AbortSignal): Promise<string> {
     const cached = this.fileUrlCache.get(itemId)
     if (cached) return cached
 
     const inFlight = this.fileUrlInFlight.get(itemId)
     if (inFlight !== undefined) return inFlight
 
-    const promise = this.fetchFileUrlForItemId(itemId)
+    const promise = this.fetchFileUrlForItemId(itemId, signal)
       .then((url) => {
         if (url.startsWith('file://')) {
           this.fileUrlCache.set(itemId, url)
@@ -298,10 +302,10 @@ export default class EagleUploader {
   // The thumbnail endpoint always returns .png thumbnails regardless of the original
   // file format, so deriving the original path from the thumbnail path gives the wrong
   // extension for non-PNG originals (e.g. .jpg files would resolve as .png).
-  private async fetchFileUrlForItemId(itemId: string): Promise<string> {
+  private async fetchFileUrlForItemId(itemId: string, signal?: AbortSignal): Promise<string> {
     const { eagleHost, eaglePort } = this.settings
     const infoUrl = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.ITEM_INFO}?id=${itemId}`
-    const infoData = await this.requestJson<{ status: string; data?: { name?: string; ext?: string } }>(infoUrl, 'GET')
+    const infoData = await this.requestJson<{ status: string; data?: { name?: string; ext?: string } }>(infoUrl, 'GET', undefined, signal)
 
     if (infoData?.status !== 'success') {
       console.warn('Eagle: item/info returned non-success', { itemId, status: infoData?.status })
@@ -309,7 +313,7 @@ export default class EagleUploader {
       console.warn('Eagle: item/info response missing name/ext', { itemId, data: infoData.data })
     } else {
       const { name, ext } = infoData.data
-      const libraryRoot = await this.getLibraryRootPath()
+      const libraryRoot = await this.getLibraryRootPath(signal)
       if (!libraryRoot) {
         console.warn('Eagle: cannot resolve library root — falling back to eagle:// URL', { itemId })
       } else {
@@ -321,10 +325,10 @@ export default class EagleUploader {
     return `${EAGLE_URL_PROTOCOL}${itemId}`
   }
 
-  async getLibraryRootPath(): Promise<string | null> {
+  async getLibraryRootPath(signal?: AbortSignal): Promise<string | null> {
     const { eagleHost, eaglePort } = this.settings
     const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.LIBRARY_INFO}`
-    const data = await this.requestJson<{ status: string; data?: { library?: { path?: string } } }>(url, 'GET')
+    const data = await this.requestJson<{ status: string; data?: { library?: { path?: string } } }>(url, 'GET', undefined, signal)
     return data?.data?.library?.path ?? null
   }
 

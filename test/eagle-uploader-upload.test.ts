@@ -100,10 +100,10 @@ describe('EagleUploader — upload error / cancel paths', () => {
   it('throws AbortError when signal is aborted after requestUrl returns', async () => {
     const controller = new AbortController()
 
-    __setRequestUrlMock(async (_args: { url: string }) => {
+    __setRequestUrlMock(() => {
       // Abort the signal while requestUrl is "in flight"
       controller.abort()
-      return successResponse([])
+      return Promise.resolve(successResponse([]))
     })
 
     const uploader = createUploader()
@@ -123,9 +123,9 @@ describe('EagleUploader — upload error / cancel paths', () => {
     controller.abort()
 
     let requestUrlCalled = false
-    __setRequestUrlMock(async () => {
+    __setRequestUrlMock(() => {
       requestUrlCalled = true
-      return successResponse([])
+      return Promise.resolve(successResponse([]))
     })
 
     const uploader = createUploader()
@@ -142,7 +142,7 @@ describe('EagleUploader — upload error / cancel paths', () => {
 
   // 4. EagleApiError propagation: non-2xx HTTP response produces EagleApiError
   it('throws EagleApiError when requestUrl returns a non-2xx status', async () => {
-    __setRequestUrlMock(async () => errorResponse(500, 'Internal Server Error'))
+    __setRequestUrlMock(() => Promise.resolve(errorResponse(500, 'Internal Server Error')))
 
     const uploader = createUploader()
     const internals = asPrivate(uploader)
@@ -172,7 +172,7 @@ describe('EagleUploader — upload error / cancel paths', () => {
 
   // 6. Temp file cleanup: finally block calls fs.unlink even when upload fails
   it('calls fs.unlink in finally block when upload fails', async () => {
-    const unlinkSpy = vi.fn((_path: string, _cb: (err: null) => void) => {})
+    const unlinkSpy = vi.fn()
     const app = createAppMockWithUnlink(unlinkSpy)
     const uploader = createUploader(app)
     const internals = asPrivate(uploader)
@@ -192,7 +192,7 @@ describe('EagleUploader — upload error / cancel paths', () => {
   it('calls fs.unlink in finally block on successful upload', async () => {
     vi.useFakeTimers()
 
-    const unlinkSpy = vi.fn((_path: string, _cb: (err: null) => void) => {})
+    const unlinkSpy = vi.fn()
     const app = createAppMockWithUnlink(unlinkSpy)
     const uploader = createUploader(app)
     const internals = asPrivate(uploader)

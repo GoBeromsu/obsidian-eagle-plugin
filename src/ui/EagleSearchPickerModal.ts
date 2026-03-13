@@ -271,13 +271,11 @@ export default class EagleSearchPickerModal extends Modal {
         this.enqueueThumbnailFallback(item, thumbWrapper)
         void this.loadThumbnails(token)
       })
+      this.appendExtBadge(thumbWrapper, item.ext)
     } else {
       this.enqueueThumbnailFallback(item, thumbWrapper)
       void this.loadThumbnails(token)
     }
-
-    // Extension badge — overlay on thumbnail
-    this.appendExtBadge(thumbWrapper, item.ext)
 
     card.createEl('span', {
       cls: 'eagle-picker-name',
@@ -329,7 +327,6 @@ export default class EagleSearchPickerModal extends Modal {
       cls: 'eagle-picker-no-thumb',
       text: item.ext?.toUpperCase() ?? '?',
     })
-    this.appendExtBadge(thumbWrapper, item.ext)
     this.thumbFallbackMap.set(item.id, { wrapper: thumbWrapper, ext: item.ext })
   }
 

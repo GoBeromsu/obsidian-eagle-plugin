@@ -19,7 +19,7 @@ export default class EagleSearchPickerModal extends Modal {
   private statusEl: HTMLElement
   private gridEl: HTMLElement
   private results: EagleItemSearchResult[] = []
-  private readonly thumbFallbackMap = new Map<string, HTMLElement>()
+  private readonly thumbFallbackMap = new Map<string, { wrapper: HTMLElement; ext?: string }>()
   private activeSearchToken = 0
   private debounceTimer: ReturnType<typeof setTimeout> | null = null
   private isThumbnailFallbackLoading = false
@@ -277,12 +277,7 @@ export default class EagleSearchPickerModal extends Modal {
     }
 
     // Extension badge — overlay on thumbnail
-    if (item.ext) {
-      thumbWrapper.createEl('span', {
-        cls: 'eagle-picker-ext-badge',
-        text: item.ext.toUpperCase(),
-      })
-    }
+    this.appendExtBadge(thumbWrapper, item.ext)
 
     card.createEl('span', {
       cls: 'eagle-picker-name',
@@ -319,13 +314,23 @@ export default class EagleSearchPickerModal extends Modal {
     })
   }
 
+  private appendExtBadge(thumbWrapper: HTMLElement, ext?: string): void {
+    if (ext) {
+      thumbWrapper.createEl('span', {
+        cls: 'eagle-picker-ext-badge',
+        text: ext.toUpperCase(),
+      })
+    }
+  }
+
   private enqueueThumbnailFallback(item: EagleItemSearchResult, thumbWrapper: HTMLElement): void {
     thumbWrapper.empty()
     thumbWrapper.createEl('span', {
       cls: 'eagle-picker-no-thumb',
       text: item.ext?.toUpperCase() ?? '?',
     })
-    this.thumbFallbackMap.set(item.id, thumbWrapper)
+    this.appendExtBadge(thumbWrapper, item.ext)
+    this.thumbFallbackMap.set(item.id, { wrapper: thumbWrapper, ext: item.ext })
   }
 
   private async loadThumbnails(token: number): Promise<void> {
@@ -357,16 +362,18 @@ export default class EagleSearchPickerModal extends Modal {
                 return
               }
 
-              const thumbWrapper = this.thumbFallbackMap.get(item.id)
-              if (!thumbWrapper) {
+              const entry = this.thumbFallbackMap.get(item.id)
+              if (!entry) {
                 continue
               }
 
+              const { wrapper: thumbWrapper, ext } = entry
               thumbWrapper.empty()
               thumbWrapper.createEl('img', {
                 cls: 'eagle-picker-img',
                 attr: { src: fileUrlToDisplayUrl(thumbnailUrl), loading: 'lazy', alt: item.name || item.id },
               })
+              this.appendExtBadge(thumbWrapper, ext)
               this.thumbFallbackMap.delete(item.id)
               this.debugLog('thumbnail:fallback:ok', {
                 token,

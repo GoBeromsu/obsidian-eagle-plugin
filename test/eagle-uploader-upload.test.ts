@@ -157,8 +157,6 @@ describe('EagleUploader — upload error / cancel paths', () => {
 
   // 5. EagleApiError propagates through the full upload() call stack
   it('propagates EagleApiError thrown by addToEagle out of upload()', async () => {
-    vi.useFakeTimers()
-
     const uploader = createUploader()
     const internals = asPrivate(uploader)
 
@@ -166,9 +164,7 @@ describe('EagleUploader — upload error / cancel paths', () => {
     vi.spyOn(internals, 'ensureFolderExists').mockResolvedValue('folder-1')
     vi.spyOn(internals, 'addToEagle').mockRejectedValue(new EagleApiError('Eagle offline'))
 
-    const uploadPromise = uploader.upload(new File([], 'test.png'))
-    await vi.runAllTimersAsync()
-    const error = await uploadPromise.catch((e: unknown) => e)
+    const error = await uploader.upload(new File([], 'test.png')).catch((e: unknown) => e)
 
     expect(error).toBeInstanceOf(EagleApiError)
     expect((error as EagleApiError).message).toBe('Eagle offline')
@@ -176,8 +172,6 @@ describe('EagleUploader — upload error / cancel paths', () => {
 
   // 6. Temp file cleanup: finally block calls fs.unlink even when upload fails
   it('calls fs.unlink in finally block when upload fails', async () => {
-    vi.useFakeTimers()
-
     const unlinkSpy = vi.fn((_path: string, _cb: (err: null) => void) => {})
     const app = createAppMockWithUnlink(unlinkSpy)
     const uploader = createUploader(app)
@@ -188,9 +182,7 @@ describe('EagleUploader — upload error / cancel paths', () => {
     vi.spyOn(internals, 'ensureFolderExists').mockResolvedValue('folder-1')
     vi.spyOn(internals, 'addToEagle').mockRejectedValue(new EagleApiError('Eagle offline'))
 
-    const uploadPromise = uploader.upload(new File([], 'test.png'))
-    await vi.runAllTimersAsync()
-    await uploadPromise.catch(() => {})
+    await uploader.upload(new File([], 'test.png')).catch(() => {})
 
     expect(unlinkSpy).toHaveBeenCalledOnce()
     expect(unlinkSpy).toHaveBeenCalledWith(tempPath, expect.any(Function))
@@ -231,14 +223,16 @@ describe('EagleUploader — upload error / cancel paths', () => {
     vi.spyOn(internals, 'ensureFolderExists').mockResolvedValue('folder-1')
     vi.spyOn(internals, 'addToEagle').mockResolvedValue('item-1')
 
-    const uploadPromise = uploader.upload(new File([], 'test.png'), { signal: controller.signal })
+    const resultPromise = uploader
+      .upload(new File([], 'test.png'), { signal: controller.signal })
+      .catch((e: unknown) => e)
 
     // Abort mid-delay (before the 300 ms EAGLE_PROCESSING_DELAY_MS elapses)
     await vi.advanceTimersByTimeAsync(100)
     controller.abort()
     await vi.advanceTimersByTimeAsync(300)
 
-    const error = await uploadPromise.catch((e: unknown) => e)
+    const error = await resultPromise
 
     expect(error).toBeInstanceOf(DOMException)
     expect((error as DOMException).name).toBe('AbortError')

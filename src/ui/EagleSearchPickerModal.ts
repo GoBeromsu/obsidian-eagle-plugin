@@ -276,10 +276,34 @@ export default class EagleSearchPickerModal extends Modal {
       void this.loadThumbnails(token)
     }
 
+    // Extension badge — overlay on thumbnail
+    if (item.ext) {
+      thumbWrapper.createEl('span', {
+        cls: 'eagle-picker-ext-badge',
+        text: item.ext.toUpperCase(),
+      })
+    }
+
     card.createEl('span', {
       cls: 'eagle-picker-name',
       text: item.name || item.id,
     })
+
+    // Tags
+    if (item.tags?.length) {
+      card.createEl('span', {
+        cls: 'eagle-picker-tags',
+        text: item.tags.slice(0, 3).join(', ') + (item.tags.length > 3 ? ' \u2026' : ''),
+      })
+    }
+
+    // Annotation (truncated)
+    if (item.annotation) {
+      card.createEl('span', {
+        cls: 'eagle-picker-annotation',
+        text: item.annotation.length > 40 ? item.annotation.slice(0, 40) + '\u2026' : item.annotation,
+      })
+    }
 
     const choose = () => {
       this.close()

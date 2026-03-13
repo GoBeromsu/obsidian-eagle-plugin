@@ -203,10 +203,11 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
         btn.setButtonText('Open folder').onClick(() => {
           const adapter = this.app.vault.adapter as { getBasePath?: () => string }
           const basePath = typeof adapter.getBasePath === 'function' ? adapter.getBasePath() : ''
-          const folderPath = basePath
-            ? `${basePath}/${this.plugin.settings.cacheFolderName}`
-            : this.plugin.settings.cacheFolderName
-          window.open(`file://${folderPath}`)
+          if (!basePath) return
+          const folderPath = `${basePath}/${this.plugin.settings.cacheFolderName}`
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { shell } = require('electron') as typeof import('electron')
+          void shell.openPath(folderPath)
         }),
       )
 

@@ -57,25 +57,21 @@ export default class EagleCacheManager {
     const exists = await adapter.exists(this.cacheFolder)
     if (!exists) return { fileCount: 0, totalSizeBytes: 0 }
 
-    let fileCount = 0
-    let totalSizeBytes = 0
-
     try {
       const listed = await adapter.list(this.cacheFolder)
-      await Promise.allSettled(
-        listed.files.map(async (filePath) => {
-          const stat = await adapter.stat(filePath)
-          if (stat) {
-            fileCount++
-            totalSizeBytes += stat.size
-          }
-        }),
-      )
+      const results = await Promise.allSettled(listed.files.map((f) => adapter.stat(f)))
+      let totalSizeBytes = 0
+      let fileCount = 0
+      for (const r of results) {
+        if (r.status === 'fulfilled' && r.value) {
+          fileCount++
+          totalSizeBytes += r.value.size
+        }
+      }
+      return { fileCount, totalSizeBytes }
     } catch {
-      // Cache folder unreadable — return what we have so far
+      return { fileCount: 0, totalSizeBytes: 0 }
     }
-
-    return { fileCount, totalSizeBytes }
   }
 
   async cacheFromBuffer(itemId: string, ext: string, data: ArrayBuffer): Promise<void> {

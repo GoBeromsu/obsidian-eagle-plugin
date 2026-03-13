@@ -603,13 +603,16 @@ export default class EaglePlugin extends Plugin {
       const noteName = this.app.workspace.getActiveFile()?.basename ?? ''
       const displayName = resolveItemName(this._settings.uploadItemNameTemplate, { originalName, noteName })
 
-      // Deduplication: check if this file was already uploaded to Eagle
+      // Deduplication: compute hash and library path once, reuse for lookup + storage
+      let dedupHash: string | null = null
+      let dedupLibraryPath: string | null = null
+
       if (this._settings.deduplicateUploads) {
         const buffer = await normalizedFile.arrayBuffer()
-        const hash = await EagleHashStore.computeHash(buffer)
-        const libraryPath = await this._eagleUploader.getLibraryRootPath(controller.signal)
-        if (libraryPath) {
-          const existingItemId = this._hashStore.lookup(hash, libraryPath)
+        dedupHash = await EagleHashStore.computeHash(buffer)
+        dedupLibraryPath = await this._eagleUploader.getLibraryRootPath(controller.signal) ?? null
+        if (dedupLibraryPath) {
+          const existingItemId = this._hashStore.lookup(dedupHash, dedupLibraryPath)
           if (existingItemId) {
             new Notice('Eagle: duplicate detected, reusing existing item')
             const fileUrl = await this._eagleUploader.getFileUrlForItemId(existingItemId, controller.signal)
@@ -635,19 +638,12 @@ export default class EaglePlugin extends Plugin {
         })
       }
 
-      // Store hash for future deduplication
-      if (this._settings.deduplicateUploads) {
-        try {
-          const buffer = await normalizedFile.arrayBuffer()
-          const hash = await EagleHashStore.computeHash(buffer)
-          const libraryPath = await this._eagleUploader.getLibraryRootPath()
-          if (libraryPath) {
-            this._hashStore.store(hash, itemId, libraryPath)
-            await this._hashStore.save(this)
-          }
-        } catch (hashErr) {
-          console.warn('Eagle: failed to store upload hash', hashErr)
-        }
+      // Store hash for future deduplication (reuse pre-computed values)
+      if (dedupHash && dedupLibraryPath) {
+        this._hashStore.store(dedupHash, itemId, dedupLibraryPath)
+        await this._hashStore.save(this).catch((e) => {
+          console.warn('Eagle: failed to store upload hash', e)
+        })
       }
 
       markdownImage = this.markdownImageFor(itemId, ext)

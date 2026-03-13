@@ -598,18 +598,20 @@ export default class EaglePlugin extends Plugin {
       }
       markdownImage = this.markdownImageFor(itemId, ext)
     } catch (e) {
-      modal.close()
       if (cancelled) {
+        modal.close()
         this.handleFailedUpload(pasteId, '<!-- upload cancelled -->')
         return markdownImage
       }
       if (e instanceof EagleApiError) {
+        modal.showError(`Upload failed: ${e.message}`)
         this.handleFailedUpload(pasteId, `Eagle upload failed, API returned an error: ${e.message}`)
       } else {
         console.error('Failed upload request: ', e)
+        modal.showError('Upload failed — check the developer console for details.')
         this.handleFailedUpload(pasteId, '⚠️Eagle upload failed, check dev console')
       }
-      throw e
+      return markdownImage
     }
 
     modal.close()

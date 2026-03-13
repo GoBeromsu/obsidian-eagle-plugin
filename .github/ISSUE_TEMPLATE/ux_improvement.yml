@@ -1,0 +1,48 @@
+name: UX Improvement
+description: Suggest a user experience improvement
+title: "[UX] "
+labels: ["enhancement", "ux"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Suggest an improvement to the plugin's user experience.
+
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: Current behavior
+      description: What is the current experience that could be improved?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-improvement
+    attributes:
+      label: Proposed improvement
+      description: How should the experience work instead?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected-area
+    attributes:
+      label: Affected area
+      description: Which part of the plugin is affected?
+      options:
+        - Settings UI
+        - Upload flow
+        - Folder mapping
+        - Image rendering
+        - Cache management
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Screenshots, mockups, or any other context
+    validations:
+      required: false

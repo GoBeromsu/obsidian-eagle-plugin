@@ -63,6 +63,7 @@ export interface EagleUploadResult {
 export interface EagleUploadOptions {
   folderName?: string
   signal?: AbortSignal
+  displayName?: string
 }
 
 interface EagleListResponse {
@@ -175,7 +176,7 @@ export default class EagleUploader {
         folderId = await this.ensureFolderExists(targetFolderName, signal)
       }
 
-      const itemId = await this.addToEagle(tempFilePath, folderId, signal)
+      const itemId = await this.addToEagle(tempFilePath, folderId, signal, options?.displayName)
 
       if (signal?.aborted) throw new DOMException('Upload cancelled', 'AbortError')
 
@@ -228,13 +229,14 @@ export default class EagleUploader {
     })
   }
 
-  private async addToEagle(filePath: string, folderId: string | undefined, signal?: AbortSignal): Promise<string> {
+  private async addToEagle(filePath: string, folderId: string | undefined, signal?: AbortSignal, displayName?: string): Promise<string> {
     const { eagleHost, eaglePort } = this.settings
     const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.ADD_FROM_PATH}`
 
+    const nameFromPath = filePath.split('/').pop() || 'image'
     const body: Record<string, string> = {
       path: filePath,
-      name: filePath.split('/').pop() || 'image',
+      name: displayName || nameFromPath,
       annotation: 'Added via Obsidian Eagle Plugin',
     }
 

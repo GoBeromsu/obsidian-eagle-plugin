@@ -12,6 +12,7 @@ export interface EaglePluginSettings {
   cacheFolderName: string
   deduplicateUploads: boolean
   searchDebounceMs: number
+  uploadItemNameTemplate: string
 }
 
 export const DEFAULT_SETTINGS: EaglePluginSettings = {
@@ -23,4 +24,5 @@ export const DEFAULT_SETTINGS: EaglePluginSettings = {
   cacheFolderName: 'eagle-cache',
   deduplicateUploads: true,
   searchDebounceMs: 300,
+  uploadItemNameTemplate: '{originalName}',
 }

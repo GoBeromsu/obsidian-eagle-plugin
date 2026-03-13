@@ -374,6 +374,11 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
   }
 
   private renderDestinationPreview(containerEl: HTMLElement): void {
+    if (this.leafChangeRef) {
+      this.app.workspace.offref(this.leafChangeRef)
+      this.leafChangeRef = null
+    }
+
     containerEl.createEl('h3', { text: 'Destination Preview' })
 
     const setting = new Setting(containerEl)

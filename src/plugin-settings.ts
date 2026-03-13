@@ -24,5 +24,5 @@ export const DEFAULT_SETTINGS: EaglePluginSettings = {
   cacheFolderName: 'eagle-cache',
   deduplicateUploads: true,
   searchDebounceMs: 300,
-  uploadItemNameTemplate: '{originalName}',
+  uploadItemNameTemplate: '{uuid}_{noteName}',
 }

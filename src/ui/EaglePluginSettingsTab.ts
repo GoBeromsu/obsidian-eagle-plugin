@@ -129,7 +129,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
       )
       .addText((text) =>
         text
-          .setPlaceholder('{originalName}')
+          .setPlaceholder('{uuid}_{noteName}')
           .setValue(this.plugin.settings.uploadItemNameTemplate)
           .onChange((value) => {
             this.plugin.settings.uploadItemNameTemplate = value

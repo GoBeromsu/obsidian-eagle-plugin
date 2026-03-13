@@ -1,4 +1,4 @@
-import { Canvas, Notice } from 'obsidian'
+import { Canvas } from 'obsidian'
 
 import EaglePlugin from './EaglePlugin'
 import ImageUploadBlockingModal from './ui/ImageUploadBlockingModal'
@@ -43,32 +43,26 @@ async function uploadImageOnCanvas(
   const modal = new ImageUploadBlockingModal(plugin.app)
   modal.open()
 
-  let cancelled = false
+  const controller = new AbortController()
   modal.onCancel = () => {
-    cancelled = true
+    controller.abort()
   }
 
   const file = e.clipboardData.files[0]
   const folderName = plugin.resolveTargetEagleFolderForActiveFile()
 
   try {
-    const { fileUrl, itemId } = await plugin.eagleUploader.upload(file, { folderName })
+    const { fileUrl, itemId } = await plugin.eagleUploader.upload(file, { folderName, signal: controller.signal })
 
-    if (cancelled) {
-      modal.close()
-      new Notice('Upload cancelled — image was already sent to Eagle, please remove it manually.')
-      return
-    }
     if (!modal.isOpen) return
 
     modal.close()
     pasteRemoteImageToCanvas(canvas, itemId, fileUrl)
   } catch (err: unknown) {
-    if (cancelled) {
-      modal.close()
+    modal.close()
+    if (err instanceof DOMException && err.name === 'AbortError') {
       return
     }
-    modal.close()
     throw err
   }
 }

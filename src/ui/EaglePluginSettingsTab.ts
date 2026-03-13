@@ -2,6 +2,7 @@ import {
   App,
   ButtonComponent,
   DropdownComponent,
+  EventRef,
   Notice,
   PluginSettingTab,
   Setting,
@@ -12,7 +13,7 @@ import {
 import EaglePlugin from '../EaglePlugin'
 import { ObsidianEagleFolderMapping } from '../plugin-settings'
 import { EagleFolderWithPath } from '../uploader/EagleUploader'
-import { sanitizeFolderMappings } from '../utils/folder-mapping'
+import { resolveDestinationPreview, sanitizeFolderMappings } from '../utils/folder-mapping'
 import RenameCacheModal from './RenameCacheModal'
 import VaultFolderSuggestModal from './VaultFolderSuggestModal'
 
@@ -25,6 +26,8 @@ function resolveVaultFolderPath(folder: TFolder): string {
 export default class EaglePluginSettingsTab extends PluginSettingTab {
   plugin: EaglePlugin
   private originalCacheFolderName = ''
+  private previewDescEl: HTMLElement | null = null
+  private leafChangeRef: EventRef | null = null
 
   constructor(app: App, plugin: EaglePlugin) {
     super(app, plugin)
@@ -106,6 +109,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
         .onChange((value) => {
           this.plugin.settings.eagleFolderName = value
           void this.plugin.saveSettings()
+          this.updatePreviewDesc()
         }),
     )
 
@@ -150,6 +154,9 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
 
     // ── Folder Mapping ───────────────────────────────────────────────────────
     this.renderFolderMappingsSection(containerEl, eagleFoldersPromise)
+
+    // ── Destination Preview ──────────────────────────────────────────────────
+    this.renderDestinationPreview(containerEl)
 
     // ── Search ───────────────────────────────────────────────────────────────
     containerEl.createEl('h3', { text: 'Search' })
@@ -226,6 +233,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
       dropdown.onChange((value) => {
         this.plugin.settings.eagleFolderName = value
         void this.plugin.saveSettings()
+        this.updatePreviewDesc()
       })
     })
   }
@@ -266,6 +274,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
         this.plugin.settings.folderMappings.push({ obsidianFolder: '', eagleFolder: '' })
         void this.plugin.saveSettings()
         renderRows()
+        this.updatePreviewDesc()
       })
 
     renderRows()
@@ -289,6 +298,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
         if (!m) return
         m.obsidianFolder = newValue
         void this.plugin.saveSettings()
+        this.updatePreviewDesc()
       })
     obsidianInput.inputEl.addClass('eagle-folder-mapping-input')
 
@@ -302,6 +312,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
           m.obsidianFolder = resolveVaultFolderPath(folder)
           obsidianInput.setValue(m.obsidianFolder)
           void this.plugin.saveSettings()
+          this.updatePreviewDesc()
         }).open()
       })
 
@@ -316,6 +327,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
         if (!m) return
         m.eagleFolder = newValue
         void this.plugin.saveSettings()
+        this.updatePreviewDesc()
       })
     eagleInput.inputEl.addClass('eagle-folder-mapping-input')
 
@@ -345,6 +357,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
         if (!cur) return
         cur.eagleFolder = value
         void this.plugin.saveSettings()
+        this.updatePreviewDesc()
       })
     })
 
@@ -356,10 +369,68 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
         this.plugin.settings.folderMappings.splice(index, 1)
         void this.plugin.saveSettings()
         onRemoved()
+        this.updatePreviewDesc()
       })
   }
 
+  private renderDestinationPreview(containerEl: HTMLElement): void {
+    containerEl.createEl('h3', { text: 'Destination Preview' })
+
+    const setting = new Setting(containerEl)
+      .setName('Current upload destination')
+      .setDesc('Open a note to see where uploads from that note would land.')
+
+    this.previewDescEl = setting.descEl
+
+    this.updatePreviewDesc()
+
+    this.leafChangeRef = this.app.workspace.on('active-leaf-change', () => {
+      this.updatePreviewDesc()
+    })
+  }
+
+  private updatePreviewDesc(): void {
+    if (!this.previewDescEl) return
+
+    const activeFile = this.app.workspace.getActiveFile()
+    if (!activeFile) {
+      this.previewDescEl.setText('Open a note to see the preview.')
+      return
+    }
+
+    const { settings } = this.plugin
+    const { noteFolderPath, matchedEagleFolder, matchedObsidianRule } = resolveDestinationPreview(
+      activeFile.path,
+      settings.folderMappings,
+    )
+
+    const notePath = noteFolderPath || '(vault root)'
+    this.previewDescEl.empty()
+
+    if (matchedEagleFolder && matchedObsidianRule) {
+      this.previewDescEl.createEl('span', { text: `Note folder: ${notePath}` })
+      this.previewDescEl.createEl('br')
+      this.previewDescEl.createEl('span', { text: `Eagle folder: ${matchedEagleFolder}` })
+      this.previewDescEl.createEl('br')
+      this.previewDescEl.createEl('span', { text: `Matched rule: ${matchedObsidianRule} → ${matchedEagleFolder}` })
+      return
+    }
+
+    const fallback = settings.eagleFolderName.trim()
+    this.previewDescEl.createEl('span', { text: `Note folder: ${notePath}` })
+    this.previewDescEl.createEl('br')
+    this.previewDescEl.createEl('span', { text: `Eagle folder: ${fallback || '(Eagle default folder)'}` })
+    this.previewDescEl.createEl('br')
+    this.previewDescEl.createEl('span', { text: 'Matched rule: default folder' })
+  }
+
   override hide() {
+    if (this.leafChangeRef) {
+      this.app.workspace.offref(this.leafChangeRef)
+      this.leafChangeRef = null
+    }
+    this.previewDescEl = null
+
     this.plugin.settings.folderMappings = sanitizeFolderMappings(
       this.plugin.settings.folderMappings,
     )

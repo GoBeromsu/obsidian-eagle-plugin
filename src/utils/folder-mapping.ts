@@ -38,21 +38,28 @@ export function sanitizeFolderMappings(
     .filter((mapping) => mapping.obsidianFolder !== '' && mapping.eagleFolder !== '')
 }
 
-export function resolveMappedEagleFolder(
+export interface DestinationPreview {
+  noteFolderPath: string
+  matchedEagleFolder: string | undefined
+  matchedObsidianRule: string | undefined
+}
+
+export function resolveDestinationPreview(
   filePath: string | null,
   mappings: ObsidianEagleFolderMapping[],
-): string | undefined {
-  const currentFolderPath = folderPathFromFilePath(filePath)
+): DestinationPreview {
+  const noteFolderPath = folderPathFromFilePath(filePath)
   const sanitizedMappings = sanitizeFolderMappings(mappings)
 
-  let matchedFolder: string | undefined
+  let matchedEagleFolder: string | undefined
+  let matchedObsidianRule: string | undefined
   let matchedLength = -1
 
   for (const mapping of sanitizedMappings) {
     const { obsidianFolder, eagleFolder } = mapping
     const isMatch =
-      currentFolderPath === obsidianFolder ||
-      currentFolderPath.startsWith(`${obsidianFolder}/`)
+      noteFolderPath === obsidianFolder ||
+      noteFolderPath.startsWith(`${obsidianFolder}/`)
 
     if (!isMatch) {
       continue
@@ -60,9 +67,17 @@ export function resolveMappedEagleFolder(
 
     if (obsidianFolder.length >= matchedLength) {
       matchedLength = obsidianFolder.length
-      matchedFolder = eagleFolder
+      matchedEagleFolder = eagleFolder
+      matchedObsidianRule = obsidianFolder
     }
   }
 
-  return matchedFolder
+  return { noteFolderPath, matchedEagleFolder, matchedObsidianRule }
+}
+
+export function resolveMappedEagleFolder(
+  filePath: string | null,
+  mappings: ObsidianEagleFolderMapping[],
+): string | undefined {
+  return resolveDestinationPreview(filePath, mappings).matchedEagleFolder
 }

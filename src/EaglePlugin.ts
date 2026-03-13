@@ -570,28 +570,25 @@ export default class EaglePlugin extends Plugin {
   }
 
   private async uploadFileAndEmbedEagleImage(file: File, atPos?: EditorPosition) {
+    if (!this.activeEditor) {
+      new Notice('Eagle: no active editor — cannot upload.')
+      return
+    }
     const pasteId = generatePseudoRandomId()
     this.insertTemporaryText(pasteId, atPos)
 
     const modal = new ImageUploadBlockingModal(this.app)
     modal.open()
-    let cancelled = false
+    const controller = new AbortController()
     modal.onCancel = () => {
-      cancelled = true
+      controller.abort()
     }
 
     let markdownImage = ''
     try {
       const folderName = this.resolveTargetEagleFolderForActiveFile()
       const normalizedFile = await normalizeImageForUpload(file)
-      const { itemId, fileUrl, ext } = await this._eagleUploader.upload(normalizedFile, { folderName })
-
-      if (cancelled) {
-        modal.close()
-        new Notice('Upload cancelled — image was already sent to Eagle, please remove it manually.')
-        this.handleFailedUpload(pasteId, '<!-- upload cancelled -->')
-        return markdownImage
-      }
+      const { itemId, fileUrl, ext } = await this._eagleUploader.upload(normalizedFile, { folderName, signal: controller.signal })
 
       if (fileUrl.startsWith('file://')) {
         await this._cacheManager.cacheFromOsPath(itemId, ext, fileUrlToOsPath(fileUrl)).catch((e) => {
@@ -600,12 +597,13 @@ export default class EaglePlugin extends Plugin {
       }
       markdownImage = this.markdownImageFor(itemId, ext)
     } catch (e) {
-      if (cancelled) {
+      if (e instanceof DOMException && e.name === 'AbortError') {
         modal.close()
-        this.handleFailedUpload(pasteId, '<!-- upload cancelled -->')
+        this.handleFailedUpload(pasteId, ' upload cancelled ')
         return markdownImage
       }
       if (e instanceof EagleApiError) {
+        console.error('Eagle upload failed:', e.message)
         modal.showError(`Upload failed: ${e.message}`)
         this.handleFailedUpload(pasteId, `Eagle upload failed, API returned an error: ${e.message}`)
       } else {
@@ -625,6 +623,7 @@ export default class EaglePlugin extends Plugin {
     const progressText = EaglePlugin.progressTextFor(pasteId)
     const replacement = `${progressText}\n`
     const editor = this.activeEditor
+    if (!editor) return
     if (atPos) {
       editor.replaceRange(replacement, atPos, atPos)
     } else {
@@ -642,19 +641,21 @@ export default class EaglePlugin extends Plugin {
 
   private embedMarkDownImage(pasteId: string, markdownImage: string) {
     const progressText = EaglePlugin.progressTextFor(pasteId)
-
-    replaceFirstOccurrence(this.activeEditor, progressText, markdownImage)
+    const editor = this.activeEditor
+    if (!editor) return
+    replaceFirstOccurrence(editor, progressText, markdownImage)
   }
 
   private handleFailedUpload(pasteId: string, message: string) {
     const progressText = EaglePlugin.progressTextFor(pasteId)
-    replaceFirstOccurrence(this.activeEditor, progressText, `<!--${message}-->`)
+    const editor = this.activeEditor
+    if (!editor) return
+    replaceFirstOccurrence(editor, progressText, `<!--${message}-->`)
   }
 
-  private get activeEditor(): Editor {
+  private get activeEditor(): Editor | null {
     const mdView = this.app.workspace.getActiveViewOfType(MarkdownView)
-    if (!mdView) throw new Error('No active Markdown editor')
-    return mdView.editor
+    return mdView?.editor ?? null
   }
 
   async renameCache(oldFolder: string, newFolder: string): Promise<void> {

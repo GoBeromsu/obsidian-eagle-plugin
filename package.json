@@ -18,9 +18,9 @@
     "lint:fix": "eslint . --fix",
     "version": "node scripts/version.mjs",
     "postversion": "git push && git push --tags",
-    "release:patch": "pnpm lint:fix && pnpm version patch",
-    "release:minor": "pnpm lint:fix && pnpm version minor",
-    "release:major": "pnpm lint:fix && pnpm version major",
+    "release:patch": "node scripts/release.mjs patch",
+    "release:minor": "node scripts/release.mjs minor",
+    "release:major": "node scripts/release.mjs major",
     "prepare": "husky"
   },
   "keywords": [

@@ -7,7 +7,7 @@ Eagle Plugin for Obsidian — uploads images to Eagle instead of storing them lo
 | `pnpm dev` | Vault selection + esbuild watch + hot reload |
 | `pnpm dev:build` | esbuild watch only (no vault) |
 | `pnpm build` | Production build (single-shot) |
-| `pnpm ci` | build + lint + test |
+| `pnpm run ci` | build + lint + test |
 | `pnpm test` | Vitest run |
 | `pnpm test:ui` | Vitest with UI |
 | `pnpm verify` | Build, reload plugin in vault, run verify script |
@@ -15,9 +15,9 @@ Eagle Plugin for Obsidian — uploads images to Eagle instead of storing them lo
 | `pnpm lint` | ESLint check |
 | `pnpm lint:fix` | ESLint auto-fix |
 | `pnpm version` | Bump version in package.json, manifest.json, versions.json |
-| `pnpm release:patch` | lint:fix, patch bump, auto-push tag |
-| `pnpm release:minor` | lint:fix, minor bump, auto-push tag |
-| `pnpm release:major` | lint:fix, major bump, auto-push tag |
+| `pnpm release:patch` | run CI, patch bump, auto-push tag |
+| `pnpm release:minor` | run CI, minor bump, auto-push tag |
+| `pnpm release:major` | run CI, major bump, auto-push tag |
 | `pnpm prepare` | Husky git hooks setup |
 
 ## Architecture
@@ -64,8 +64,8 @@ src/
 
 ## Release
 
-1. `pnpm ci` — MUST pass (build + lint + test)
-2. `pnpm release:patch|minor|major` — lint:fix, version bump, auto-push tag
+1. `pnpm run ci` — MUST pass (build + lint + test)
+2. `pnpm release:patch|minor|major` — run CI, version bump, auto-push tag
 3. GitHub Actions handles CI + Release workflows
 
 **DENIED by settings.json:** `git tag`, `git push --tags`, `gh release` — only `pnpm release:*` is allowed.

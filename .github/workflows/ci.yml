@@ -11,6 +11,7 @@ env:
   HUSKY: 0
 
 permissions:
+  contents: read
   checks: write
   pull-requests: write
 

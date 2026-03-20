@@ -3,7 +3,6 @@ import {
   ButtonComponent,
   DropdownComponent,
   EventRef,
-  Notice,
   PluginSettingTab,
   Setting,
   TextComponent,
@@ -93,9 +92,9 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
           const connected = await this.plugin.eagleUploader.isConnected()
           this.updateConnectionBadge(statusBadge, connected)
           if (connected) {
-            new Notice('Connected to Eagle')
+            this.plugin.notices.show('connection_ok')
           } else {
-            new Notice('Cannot reach Eagle — check host/port')
+            this.plugin.notices.show('connection_fail')
           }
           btn.setDisabled(false)
           btn.setButtonText('Test Connection')

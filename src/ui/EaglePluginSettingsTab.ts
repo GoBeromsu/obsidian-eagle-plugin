@@ -9,10 +9,11 @@ import {
   TFolder,
 } from 'obsidian'
 
-import EaglePlugin from '../EaglePlugin'
-import { ObsidianEagleFolderMapping } from '../plugin-settings'
-import { EagleFolderWithPath } from '../uploader/EagleUploader'
-import { resolveDestinationPreview, sanitizeFolderMappings } from '../utils/folder-mapping'
+import type EaglePlugin from '../main'
+
+import { resolveDestinationPreview, sanitizeFolderMappings } from '../domain/folder-mapping'
+import { ObsidianEagleFolderMapping } from '../domain/settings'
+import { EagleFolderWithPath } from './EagleUploader'
 import RenameCacheModal from './RenameCacheModal'
 import VaultFolderSuggestModal from './VaultFolderSuggestModal'
 

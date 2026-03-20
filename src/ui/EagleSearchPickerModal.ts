@@ -1,8 +1,8 @@
 import { App, Modal, TextComponent } from 'obsidian'
 
-import EagleApiError from '../uploader/EagleApiError'
-import EagleUploader, { EagleItemSearchResult } from '../uploader/EagleUploader'
-import { fileUrlToDisplayUrl } from '../utils/file-url'
+import EagleApiError from '../domain/EagleApiError'
+import EagleUploader, { EagleItemSearchResult } from './EagleUploader'
+import { fileUrlToDisplayUrl } from './file-url'
 
 const SEARCH_RESULT_LIMIT = 100
 const THUMBNAIL_CONCURRENCY = 6

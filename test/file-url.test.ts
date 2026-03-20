@@ -4,7 +4,7 @@ import {
   filePathToFileUrl,
   normalizeEagleApiPathToFileUrl,
   resolveEagleThumbnailUrl,
-} from '../src/utils/file-url'
+} from '../src/ui/file-url'
 
 describe(filePathToFileUrl, () => {
   it('percent-encodes spaces, unicode, and parentheses', () => {

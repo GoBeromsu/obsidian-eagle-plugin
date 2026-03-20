@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { EagleItemSearchResult } from '../src/uploader/EagleUploader'
-import type EagleUploader from '../src/uploader/EagleUploader'
+import type { EagleItemSearchResult } from '../src/ui/EagleUploader'
+import type EagleUploader from '../src/ui/EagleUploader'
 
 type ElementListener = (event?: { key?: string; isComposing?: boolean; preventDefault?: () => void }) => void
 

@@ -9,33 +9,29 @@ import {
   TFile,
 } from 'obsidian'
 
-import EagleCacheManager from './cache/EagleCacheManager'
-import EagleHashStore from './cache/EagleHashStore'
-import { createEagleCanvasPasteHandler } from './Canvas'
-import { DEFAULT_SETTINGS, EaglePluginSettings } from './plugin-settings'
+import EagleApiError from './domain/EagleApiError'
+import { resolveMappedEagleFolder, sanitizeFolderMappings } from './domain/folder-mapping'
+import { DEFAULT_SETTINGS, EaglePluginSettings } from './domain/settings'
 import { DebounceController } from './shared/debounce-controller'
 import { PluginLogger } from './shared/plugin-logger'
 import { NoticeCatalog, PluginNotices } from './shared/plugin-notices'
+import { createEagleCanvasPasteHandler } from './ui/Canvas'
+import EagleCacheManager from './ui/EagleCacheManager'
+import EagleHashStore from './ui/EagleHashStore'
 import EaglePluginSettingsTab from './ui/EaglePluginSettingsTab'
 import EagleSearchPickerModal from './ui/EagleSearchPickerModal'
+import EagleUploader, { type EagleItemSearchResult } from './ui/EagleUploader'
+import { findLocalFileUnderCursor, replaceFirstOccurrence } from './ui/editor'
+import { fileUrlToDisplayUrl, fileUrlToOsPath } from './ui/file-url'
 import ImageUploadBlockingModal from './ui/ImageUploadBlockingModal'
 import InfoModal from './ui/InfoModal'
+import { normalizeImageForUpload, removeReferenceIfPresent } from './ui/misc'
+import { filesAndLinksStatsFrom, getAllCachedReferencesForFile, replaceAllLocalReferencesWithRemoteOne } from './ui/obsidian-vault'
 import UpdateLinksConfirmationModal from './ui/UpdateLinksConfirmationModal'
-import EagleApiError from './uploader/EagleApiError'
-import EagleUploader, { type EagleItemSearchResult } from './uploader/EagleUploader'
-import { resolveItemName } from './uploader/item-naming'
-import { findLocalFileUnderCursor, replaceFirstOccurrence } from './utils/editor'
-import { fileUrlToDisplayUrl, fileUrlToOsPath } from './utils/file-url'
 import { allFilesAreImages } from './utils/FileList'
-import { resolveMappedEagleFolder, sanitizeFolderMappings } from './utils/folder-mapping'
 import { extractFileExtension } from './utils/image-format'
+import { resolveItemName } from './utils/item-naming'
 import { applyTextReplacements, findEagleWikilinkTokens, findMarkdownImageTokens } from './utils/markdown-image'
-import { normalizeImageForUpload, removeReferenceIfPresent } from './utils/misc'
-import {
-  filesAndLinksStatsFrom,
-  getAllCachedReferencesForFile,
-  replaceAllLocalReferencesWithRemoteOne,
-} from './utils/obsidian-vault'
 import { generatePseudoRandomId } from './utils/pseudo-random'
 
 const EAGLE_NOTICE_CATALOG: NoticeCatalog = {

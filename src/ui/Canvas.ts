@@ -1,9 +1,10 @@
 import { Canvas } from 'obsidian'
 
-import EaglePlugin from './EaglePlugin'
-import ImageUploadBlockingModal from './ui/ImageUploadBlockingModal'
-import { buildPasteEventCopy } from './utils/events'
-import { allFilesAreImages } from './utils/FileList'
+import type EaglePlugin from '../main'
+
+import { buildPasteEventCopy } from '../utils/events'
+import { allFilesAreImages } from '../utils/FileList'
+import ImageUploadBlockingModal from './ImageUploadBlockingModal'
 
 export function createEagleCanvasPasteHandler(
   plugin: EaglePlugin,

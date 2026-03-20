@@ -276,6 +276,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
     } catch (err) {
       if (badge) this.updateConnectionBadge(badge, false)
       if (!(err instanceof Error && err.message.includes('connect'))) {
+        // eslint-disable-next-line no-console
         console.error('Eagle: unexpected error while loading folder list', err)
       }
       return []

@@ -203,6 +203,7 @@ export default class EagleUploader {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         fs.unlink(tempFilePath, (err: NodeJS.ErrnoException | null) => {
           if (err && err.code !== 'ENOENT') {
+            // eslint-disable-next-line no-console
             console.warn('Eagle: failed to delete temp file', { tempFilePath, code: err.code, message: err.message })
           }
         })
@@ -310,13 +311,16 @@ export default class EagleUploader {
     const infoData = await this.requestJson<{ status: string; data?: { name?: string; ext?: string } }>(infoUrl, 'GET', undefined, signal)
 
     if (infoData?.status !== 'success') {
+      // eslint-disable-next-line no-console
       console.warn('Eagle: item/info returned non-success', { itemId, status: infoData?.status })
     } else if (!infoData.data?.name || !infoData.data?.ext) {
+      // eslint-disable-next-line no-console
       console.warn('Eagle: item/info response missing name/ext', { itemId, data: infoData.data })
     } else {
       const { name, ext } = infoData.data
       const libraryRoot = await this.getLibraryRootPath(signal)
       if (!libraryRoot) {
+        // eslint-disable-next-line no-console
         console.warn('Eagle: cannot resolve library root — falling back to eagle:// URL', { itemId })
       } else {
         const filePath = `${libraryRoot}/images/${itemId}.info/${name}.${ext}`
@@ -453,6 +457,7 @@ export default class EagleUploader {
     if (byName) return byName.id
 
     if (name.includes('/')) {
+      // eslint-disable-next-line no-console
       console.warn('Eagle: nested folder path not found in library; creating root folder with literal name', { name })
     }
     return this.createFolder(name, signal)
@@ -468,6 +473,7 @@ export default class EagleUploader {
       await this.getLibraryRootPath()
       return true
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.debug('Eagle: isConnected check failed', err)
       return false
     }
@@ -485,6 +491,7 @@ export default class EagleUploader {
       const data = await this.requestJson<{ status: string; data?: { isDeleted?: boolean } }>(url, 'GET')
       return data.status === 'success' && !data.data?.isDeleted
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.debug('Eagle: itemExists check failed — treating as uncertain', { itemId, err })
       return null
     }

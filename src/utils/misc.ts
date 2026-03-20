@@ -62,6 +62,7 @@ export async function normalizeImageForUpload(image: File): Promise<File> {
   // Eagle handles native formats (HEIC, TIFF, etc.) natively — no conversion needed.
   // Log unrecognized formats so upload failures are easier to trace.
   if (!detected.recognized) {
+    // eslint-disable-next-line no-console
     console.warn('Eagle: image format not recognized, passing to Eagle as-is', {
       name: image.name,
       type: image.type,

@@ -51,6 +51,7 @@ export default class EagleHashStore {
         }
       }
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.warn('EagleHashStore: failed to load', err)
     }
   }
@@ -60,6 +61,7 @@ export default class EagleHashStore {
       const existing = ((await plugin.loadData()) as Record<string, unknown>) ?? {}
       await plugin.saveData({ ...existing, [STORE_KEY]: this.data })
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.warn('EagleHashStore: failed to save', err)
     }
   }

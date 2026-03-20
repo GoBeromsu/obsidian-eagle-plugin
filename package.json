@@ -32,6 +32,8 @@
   "author": "Beomsu Koh",
   "license": "MIT",
   "devDependencies": {
+    "@commitlint/cli": "^19.0.0",
+    "@commitlint/config-conventional": "^19.0.0",
     "@eslint/js": "^8.57.1",
     "@inquirer/prompts": "^8.1.0",
     "@types/node": "^20.0.0",
@@ -64,6 +66,9 @@
   },
   "lint-staged": {
     "src/**/*.ts": [
+      "eslint --fix"
+    ],
+    "scripts/**/*.{js,mjs}": [
       "eslint --fix"
     ]
   },

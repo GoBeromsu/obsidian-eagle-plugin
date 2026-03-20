@@ -1,4 +1,4 @@
-import { ObsidianEagleFolderMapping } from '../plugin-settings'
+import { ObsidianEagleFolderMapping } from './settings'
 
 export function normalizeVaultFolderPath(input: string): string {
   return input

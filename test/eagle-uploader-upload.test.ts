@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { DEFAULT_SETTINGS } from '../src/plugin-settings'
-import EagleApiError from '../src/uploader/EagleApiError'
-import EagleUploader from '../src/uploader/EagleUploader'
+import EagleApiError from '../src/domain/EagleApiError'
+import { DEFAULT_SETTINGS } from '../src/domain/settings'
+import EagleUploader from '../src/ui/EagleUploader'
 import { __resetRequestUrlMock, __setRequestUrlMock } from './mocks/obsidian'
 
 // ---------------------------------------------------------------------------

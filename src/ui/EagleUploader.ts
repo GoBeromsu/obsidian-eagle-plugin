@@ -2,11 +2,11 @@ import { tmpdir } from 'os'
 
 import { App, requestUrl } from 'obsidian'
 
-import { EaglePluginSettings } from '../plugin-settings'
-import { normalizeEagleApiPathToFileUrl, resolveEagleThumbnailUrl } from '../utils/file-url'
+import EagleApiError from '../domain/EagleApiError'
+import { EaglePluginSettings } from '../domain/settings'
 import { extractFileExtension } from '../utils/image-format'
 import { generatePseudoRandomId } from '../utils/pseudo-random'
-import EagleApiError from './EagleApiError'
+import { normalizeEagleApiPathToFileUrl, resolveEagleThumbnailUrl } from './file-url'
 
 const EAGLE_API_ENDPOINTS = {
   ADD_FROM_PATH: '/api/item/addFromPath',

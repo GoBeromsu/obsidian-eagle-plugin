@@ -7,7 +7,7 @@ import {
   TFile,
 } from 'obsidian'
 
-import { isKnownImageExtension } from './image-format'
+import { isKnownImageExtension } from '../utils/image-format'
 
 function localEmbeddedImageExpectedBoundaries(
   from: ClickableToken,

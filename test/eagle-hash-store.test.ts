@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import EagleHashStore from '../src/cache/EagleHashStore'
+import EagleHashStore from '../src/ui/EagleHashStore'
 
 // ---------------------------------------------------------------------------
 // Helpers

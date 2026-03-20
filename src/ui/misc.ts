@@ -4,7 +4,7 @@ import {
   detectImageFormat,
   isRenderableImageExtension,
   replaceFileExtension,
-} from './image-format'
+} from '../utils/image-format'
 
 function passesInstanceofCheck(image: File): boolean {
   return image instanceof File

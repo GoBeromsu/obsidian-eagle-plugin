@@ -10,6 +10,7 @@ node_modules
 main.js
 *.js.map
 release/
+!.claude/skills/release/
 
 # eslint
 .eslintcache

@@ -213,6 +213,17 @@
   min-width: 0;
 }
 
+/* TextComponent / DropdownComponent renders inside a wrapper div — stretch it */
+.eagle-folder-control > div,
+.eagle-folder-control > select {
+  flex: 1;
+  min-width: 0;
+}
+
+.eagle-folder-mapping-actions {
+  margin-top: 8px;
+}
+
 /* ── Connection Status Badge ────────────────────────────────────────────── */
 
 .eagle-connection-status {

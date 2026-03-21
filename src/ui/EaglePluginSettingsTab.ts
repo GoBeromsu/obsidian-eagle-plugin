@@ -3,6 +3,7 @@ import {
   ButtonComponent,
   DropdownComponent,
   EventRef,
+  Notice,
   PluginSettingTab,
   Setting,
   TextComponent,
@@ -333,6 +334,8 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
       })
     }
 
+    renderRows()
+
     const actionsContainer = containerEl.createDiv({ cls: 'eagle-folder-mapping-actions' })
     new ButtonComponent(actionsContainer)
       .setButtonText('Add mapping')
@@ -343,8 +346,6 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
         renderRows()
         this.updatePreviewDesc()
       })
-
-    renderRows()
   }
 
   private renderFolderMappingRow(
@@ -503,9 +504,14 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
     }
     this.previewDescEl = null
 
+    const before = this.plugin.settings.folderMappings.length
     this.plugin.settings.folderMappings = sanitizeFolderMappings(
       this.plugin.settings.folderMappings,
     )
+    const removed = before - this.plugin.settings.folderMappings.length
+    if (removed > 0) {
+      new Notice(`Eagle: removed ${removed} incomplete folder mapping(s)`)
+    }
     void this.plugin.saveSettings()
 
     const newFolder = this.plugin.settings.cacheFolderName

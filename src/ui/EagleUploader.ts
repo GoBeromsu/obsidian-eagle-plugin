@@ -401,14 +401,17 @@ export default class EagleUploader {
     return result
   }
 
-  async createFolder(name: string, signal?: AbortSignal): Promise<string> {
+  async createFolder(name: string, signal?: AbortSignal, parentId?: string): Promise<string> {
     const { eagleHost, eaglePort } = this.settings
     const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.FOLDER_CREATE}`
+
+    const body: Record<string, string> = { folderName: name }
+    if (parentId) body.parent = parentId
 
     const data = await this.requestJson<EagleListResponse>(
       url,
       'POST',
-      JSON.stringify({ folderName: name }),
+      JSON.stringify(body),
       signal,
     )
 
@@ -449,18 +452,45 @@ export default class EagleUploader {
     // Match strategy:
     // 1. Full path — slash-separated input like "Resources/Obsidian" maps to a truly nested folder.
     // 2. Root name — simple input like "Obsidian" maps to a top-level folder (no parent).
-    // Falls through to create a new root-level folder if neither matches.
+    // Falls through to create missing folder(s).
     const byPath = flat.find((f) => f.path === name)
     if (byPath) return byPath.id
 
     const byName = flat.find((f) => f.name === name && !f.path.includes('/'))
     if (byName) return byName.id
 
-    if (name.includes('/')) {
-      // eslint-disable-next-line no-console
-      console.warn('Eagle: nested folder path not found in library; creating root folder with literal name', { name })
+    if (!name.includes('/')) {
+      return this.createFolder(name, signal)
     }
-    return this.createFolder(name, signal)
+
+    // Recursively create nested folder structure (e.g. "Resources/Obsidian")
+    return this.createNestedFolders(name, flat, signal)
+  }
+
+  private async createNestedFolders(
+    path: string,
+    flat: EagleFolderWithPath[],
+    signal?: AbortSignal,
+  ): Promise<string> {
+    const segments = path.split('/')
+    let lastId = ''
+    let parentId: string | undefined
+    let currentPath = ''
+
+    for (const segment of segments) {
+      currentPath = currentPath ? `${currentPath}/${segment}` : segment
+      const existing = flat.find((f) => f.path === currentPath)
+      if (existing) {
+        lastId = existing.id
+        parentId = existing.id
+      } else {
+        lastId = await this.createFolder(segment, signal, parentId)
+        parentId = lastId
+        flat.push({ id: lastId, name: segment, path: currentPath })
+      }
+    }
+
+    return lastId
   }
 
   async listFolders(): Promise<EagleFolderWithPath[]> {

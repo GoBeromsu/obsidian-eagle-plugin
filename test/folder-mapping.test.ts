@@ -5,7 +5,7 @@ import {
   normalizeVaultFolderPath,
   resolveMappedEagleFolder,
   sanitizeFolderMappings,
-} from '../src/utils/folder-mapping'
+} from '../src/domain/folder-mapping'
 
 describe(normalizeVaultFolderPath.name, () => {
   it('trims surrounding spaces and slashes', () => {

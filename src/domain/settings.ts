@@ -13,6 +13,7 @@ export interface EaglePluginSettings {
   deduplicateUploads: boolean
   searchDebounceMs: number
   uploadItemNameTemplate: string
+  plugin_notices?: { muted: Record<string, boolean> }
 }
 
 export const DEFAULT_SETTINGS: EaglePluginSettings = {

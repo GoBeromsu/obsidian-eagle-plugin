@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
+import { normalizeImageForUpload } from '../src/ui/misc'
 import {
   detectImageFormat,
   isLikelyImageFile,
 } from '../src/utils/image-format'
-import { normalizeImageForUpload } from '../src/utils/misc'
 
 function bytesToArrayBuffer(bytes: number[]) {
   return new Uint8Array(bytes).buffer

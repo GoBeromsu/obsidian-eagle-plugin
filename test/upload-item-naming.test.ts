@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { resolveItemName } from '../src/uploader/item-naming'
+import { resolveItemName } from '../src/utils/item-naming'
 
 const CONTEXT = { originalName: 'my-photo', noteName: 'My Note' }
 

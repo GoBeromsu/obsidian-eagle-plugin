@@ -1,8 +1,8 @@
 import { App, Modal, TextComponent } from 'obsidian'
 
-import EagleApiError from '../uploader/EagleApiError'
-import EagleUploader, { EagleItemSearchResult } from '../uploader/EagleUploader'
-import { fileUrlToDisplayUrl } from '../utils/file-url'
+import EagleApiError from '../domain/EagleApiError'
+import EagleUploader, { EagleItemSearchResult } from './EagleUploader'
+import { fileUrlToDisplayUrl } from './file-url'
 
 const SEARCH_RESULT_LIMIT = 100
 const THUMBNAIL_CONCURRENCY = 6
@@ -89,6 +89,7 @@ export default class EagleSearchPickerModal extends Modal {
       return
     }
 
+    // eslint-disable-next-line no-console
     console.log('[EagleSearchPicker]', ...args)
   }
 
@@ -173,6 +174,7 @@ export default class EagleSearchPickerModal extends Modal {
       const message = error instanceof Error ? error.message : String(error)
       this.debugLog('search:error', { token, keyword, message })
       if (!(error instanceof EagleApiError)) {
+        // eslint-disable-next-line no-console
         console.error('Eagle: unexpected search error', { keyword, error })
       }
       this.results = []
@@ -382,7 +384,8 @@ export default class EagleSearchPickerModal extends Modal {
               const message = error instanceof Error ? error.message : String(error)
               this.debugLog('thumbnail:fallback:error', { token, itemId: item.id, message })
               if (!(error instanceof EagleApiError)) {
-                console.error('Eagle: unexpected thumbnail load failure', { itemId: item.id, error })
+                // eslint-disable-next-line no-console
+              console.error('Eagle: unexpected thumbnail load failure', { itemId: item.id, error })
               }
             }
           }

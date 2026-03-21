@@ -11,6 +11,7 @@ env:
   HUSKY: 0
 
 permissions:
+  contents: read
   checks: write
   pull-requests: write
 
@@ -29,12 +30,8 @@ jobs:
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Build
-        run: pnpm run build
-      - name: Lint
-        run: pnpm run lint
-      - name: Test
-        run: pnpm run test
+      - name: Run CI
+        run: pnpm run ci
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()

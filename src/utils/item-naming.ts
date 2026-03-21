@@ -1,4 +1,4 @@
-import { generatePseudoRandomId } from '../utils/pseudo-random'
+import { generatePseudoRandomId } from './pseudo-random'
 
 export interface ItemNameContext {
   originalName: string

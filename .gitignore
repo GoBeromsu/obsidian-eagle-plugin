@@ -26,3 +26,4 @@ test-results.xml
 # Obsidian dev
 .hotreload
 data.json
+.claude/

@@ -37,14 +37,11 @@ body:
     validations:
       required: true
 
-  - type: textarea
-    id: files
+  - type: input
+    id: plugin-version
     attributes:
-      label: Files involved
-      description: Which source files are related to this bug? (if known)
-      placeholder: |
-        - `src/upload/...` — upload logic
-        - `src/settings/...` — settings UI
+      label: Plugin version
+      placeholder: e.g., 2.7.3
     validations:
       required: false
 
@@ -56,10 +53,22 @@ body:
     validations:
       required: false
 
-  - type: input
-    id: plugin-version
+  - type: dropdown
+    id: os
     attributes:
-      label: Plugin version
-      placeholder: e.g., 2.7.3
+      label: Operating system
+      multiple: true
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Android
+        - iOS
     validations:
-      required: false
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any other information (error messages, console logs, related issues).

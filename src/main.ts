@@ -4,37 +4,51 @@ import {
   MarkdownFileInfo,
   MarkdownView,
   Menu,
-  Notice,
   Plugin,
   ReferenceCache,
   TFile,
 } from 'obsidian'
 
-import EagleCacheManager from './cache/EagleCacheManager'
-import EagleHashStore from './cache/EagleHashStore'
-import { createEagleCanvasPasteHandler } from './Canvas'
-import { DEFAULT_SETTINGS, EaglePluginSettings } from './plugin-settings'
+import EagleApiError from './domain/EagleApiError'
+import { resolveMappedEagleFolder, sanitizeFolderMappings } from './domain/folder-mapping'
+import { DEFAULT_SETTINGS, EaglePluginSettings } from './domain/settings'
+import { DebounceController } from './shared/debounce-controller'
+import { PluginLogger } from './shared/plugin-logger'
+import { NoticeCatalog, PluginNotices } from './shared/plugin-notices'
+import { createEagleCanvasPasteHandler } from './ui/Canvas'
+import EagleCacheManager from './ui/EagleCacheManager'
+import EagleHashStore from './ui/EagleHashStore'
 import EaglePluginSettingsTab from './ui/EaglePluginSettingsTab'
 import EagleSearchPickerModal from './ui/EagleSearchPickerModal'
+import EagleUploader, { type EagleItemSearchResult } from './ui/EagleUploader'
+import { findLocalFileUnderCursor, replaceFirstOccurrence } from './ui/editor'
+import { fileUrlToDisplayUrl, fileUrlToOsPath } from './ui/file-url'
 import ImageUploadBlockingModal from './ui/ImageUploadBlockingModal'
 import InfoModal from './ui/InfoModal'
+import { normalizeImageForUpload, removeReferenceIfPresent } from './ui/misc'
+import { filesAndLinksStatsFrom, getAllCachedReferencesForFile, replaceAllLocalReferencesWithRemoteOne } from './ui/obsidian-vault'
 import UpdateLinksConfirmationModal from './ui/UpdateLinksConfirmationModal'
-import EagleApiError from './uploader/EagleApiError'
-import EagleUploader, { type EagleItemSearchResult } from './uploader/EagleUploader'
-import { resolveItemName } from './uploader/item-naming'
-import { findLocalFileUnderCursor, replaceFirstOccurrence } from './utils/editor'
-import { fileUrlToDisplayUrl, fileUrlToOsPath } from './utils/file-url'
 import { allFilesAreImages } from './utils/FileList'
-import { resolveMappedEagleFolder, sanitizeFolderMappings } from './utils/folder-mapping'
 import { extractFileExtension } from './utils/image-format'
+import { resolveItemName } from './utils/item-naming'
 import { applyTextReplacements, findEagleWikilinkTokens, findMarkdownImageTokens } from './utils/markdown-image'
-import { normalizeImageForUpload, removeReferenceIfPresent } from './utils/misc'
-import {
-  filesAndLinksStatsFrom,
-  getAllCachedReferencesForFile,
-  replaceAllLocalReferencesWithRemoteOne,
-} from './utils/obsidian-vault'
 import { generatePseudoRandomId } from './utils/pseudo-random'
+
+const EAGLE_NOTICE_CATALOG: NoticeCatalog = {
+  links_updated: { template: 'Updated {{linksCount}} links in {{filesCount}} files' },
+  migrate_none: { template: 'No images to migrate.' },
+  migrate_done: { template: 'Migrated {{count}} image(s) to {{folder}}.{{failureSuffix}}', timeout: 8000 },
+  import_failed_api: { template: 'Failed to import from Eagle: {{message}}' },
+  import_failed: { template: 'Failed to insert Eagle image.' },
+  no_active_editor: { template: 'No active editor — cannot upload.' },
+  duplicate_detected: { template: 'Duplicate detected, reusing existing item' },
+  cache_renamed: {
+    template: "Moved cache to '{{newFolder}}'. Updated {{linksCount}} link(s) in {{filesCount}} file(s), moved {{movedFiles}} file(s).",
+    timeout: 10000,
+  },
+  connection_ok: { template: 'Connected to Eagle' },
+  connection_fail: { template: 'Cannot reach Eagle — check host/port' },
+}
 
 interface CanvasView {
   handlePaste: (e: ClipboardEvent) => Promise<void>
@@ -57,11 +71,14 @@ interface OldFormatMatch {
 }
 
 export default class EaglePlugin extends Plugin {
+  private readonly log = new PluginLogger('Eagle')
   _settings: EaglePluginSettings
 
-  get settings() {
+  get settings(): EaglePluginSettings {
     return this._settings
   }
+
+  notices: PluginNotices
 
   private _eagleUploader: EagleUploader
 
@@ -76,8 +93,20 @@ export default class EaglePlugin extends Plugin {
   }
 
   private _hashStore: EagleHashStore
-  private _syncDebounceTimer: ReturnType<typeof setTimeout> | null = null
   private _lastSyncedFilePath: string | null = null
+  private _pendingSyncFile: TFile | null = null
+  private readonly syncDebounce = new DebounceController({
+    delayMs: 500,
+    onRun: async () => {
+      const file = this._pendingSyncFile
+      if (!file) return
+      if (file.path === this._lastSyncedFilePath) return
+      this._lastSyncedFilePath = file.path
+      await this.syncCacheForFile(file).catch((err) => {
+        this.log.error('syncCacheForFile failed', err)
+      })
+    },
+  })
 
   private handleImageFiles(files: FileList, e: Event): void {
     if (!allFilesAreImages(files)) return
@@ -85,7 +114,7 @@ export default class EaglePlugin extends Plugin {
     e.preventDefault()
     for (const file of files) {
       void this.uploadFileAndEmbedEagleImage(file).catch((err) => {
-        console.error('Failed to upload image: ', err)
+        this.log.error('Failed to upload image', err)
       })
     }
   }
@@ -170,10 +199,10 @@ export default class EaglePlugin extends Plugin {
             'Error',
             'Unexpected error occurred, check Developer Tools console for details',
           ).open()
-          console.error('Something bad happened during links update', e)
+          this.log.error('Something bad happened during links update', e)
         })
         .finally(() => dialogBox.close())
-      new Notice(`Updated ${stats.linksCount} links in ${stats.filesCount} files`)
+      this.notices.show('links_updated', { linksCount: stats.linksCount, filesCount: stats.filesCount })
     })
     dialogBox.open()
   }
@@ -216,8 +245,14 @@ export default class EaglePlugin extends Plugin {
     void this.initPlugin()
   }
 
+  override onunload() {
+    this.notices.unload()
+    this.syncDebounce.dispose()
+  }
+
   private async initPlugin() {
     await this.loadSettings()
+    this.notices = new PluginNotices(this, EAGLE_NOTICE_CATALOG, 'Eagle')
     this.addSettingTab(new EaglePluginSettingsTab(this.app, this))
 
     this.setupEagleUploader()
@@ -230,7 +265,7 @@ export default class EaglePlugin extends Plugin {
     this.addMigrateAllImagesCommand()
     this.registerEagleImageRenderer()
     void this.lazySyncEagleCache().catch((err) => {
-      console.error('Eagle: background cache sync failed unexpectedly', err)
+      this.log.error('background cache sync failed unexpectedly', err)
     })
   }
 
@@ -250,23 +285,13 @@ export default class EaglePlugin extends Plugin {
           this.overridePasteHandlerForCanvasView(view as unknown as CanvasView)
         }
 
-        const file = (view as any).file
+        const file = (view as unknown as { file?: unknown }).file
         if (file instanceof TFile && file.extension === 'md') {
-          if (this._syncDebounceTimer !== null) clearTimeout(this._syncDebounceTimer)
-          this._syncDebounceTimer = setTimeout(() => {
-            this._syncDebounceTimer = null
-            if (file.path === this._lastSyncedFilePath) return
-            this._lastSyncedFilePath = file.path
-            void this.syncCacheForFile(file).catch((err) => {
-              console.error('Eagle: syncCacheForFile failed', { path: file.path, err })
-            })
-          }, 500)
+          this._pendingSyncFile = file
+          this.syncDebounce.markDirty()
         }
       }),
     )
-    this.register(() => {
-      if (this._syncDebounceTimer !== null) clearTimeout(this._syncDebounceTimer)
-    })
 
     this.registerEvent(this.app.workspace.on('editor-menu', this.eaglePluginRightClickHandler))
   }
@@ -327,7 +352,7 @@ export default class EaglePlugin extends Plugin {
     }
 
     if (oldFormatByFile.size === 0) {
-      new Notice('Eagle: No images to migrate.')
+      this.notices.show('migrate_none')
       return
     }
 
@@ -344,8 +369,8 @@ export default class EaglePlugin extends Plugin {
           } else {
             failedIds.add(itemId)
           }
-        } catch (err) {
-          console.warn('Eagle: failed to resolve URL during migration', { itemId, err })
+        } catch {
+          this.log.warn('failed to resolve URL during migration', { itemId })
           failedIds.add(itemId)
         }
       }),
@@ -361,7 +386,7 @@ export default class EaglePlugin extends Plugin {
           await this._cacheManager.cacheFromOsPath(itemId, ext, fileUrlToOsPath(fileUrl))
           successExt.set(itemId, ext)
         } catch (err) {
-          console.error('Eagle: failed to cache file during migration', { itemId, fileUrl, err })
+          this.log.error('failed to cache file during migration', err)
           failedIds.add(itemId)
         }
       }),
@@ -385,13 +410,13 @@ export default class EaglePlugin extends Plugin {
       }
     }
 
-    const parts = [`Eagle: Migrated ${migratedCount} image(s) to ${cacheFolderName}/.`]
+    let failureSuffix = ''
     if (failedIds.size > 0) {
       const sample = Array.from(failedIds).slice(0, 3).join(', ')
       const extra = failedIds.size > 3 ? ` and ${failedIds.size - 3} more` : ''
-      parts.push(`Failed: ${failedIds.size} (${sample}${extra})`)
+      failureSuffix = ` Failed: ${failedIds.size} (${sample}${extra})`
     }
-    new Notice(parts.join(' '), 8000)
+    this.notices.show('migrate_done', { count: migratedCount, folder: `${cacheFolderName}/`, failureSuffix })
   }
 
   private async lazySyncEagleCache(): Promise<void> {
@@ -402,8 +427,8 @@ export default class EaglePlugin extends Plugin {
       this.app.vault.getMarkdownFiles().map(async (file) => {
         try {
           return await this.app.vault.read(file)
-        } catch (err) {
-          console.warn('Eagle: failed to read file during lazy cache sync', { path: file.path, err })
+        } catch {
+          this.log.warn('failed to read file during lazy cache sync', { path: file.path })
           return ''
         }
       }),
@@ -421,7 +446,7 @@ export default class EaglePlugin extends Plugin {
       .filter((_, i) => {
         const result = cachedResults[i]
         if (result.status === 'rejected') {
-          console.warn('Eagle: isCached check failed, treating as uncached', { id: entries[i][0], err: result.reason })
+          this.log.warn('isCached check failed, treating as uncached', { id: entries[i][0] })
           return true // attempt sync anyway
         }
         return !result.value
@@ -438,7 +463,7 @@ export default class EaglePlugin extends Plugin {
           await this._cacheManager.cacheFromOsPath(itemId, ext, fileUrlToOsPath(fileUrl))
         } catch (err) {
           if (err instanceof EagleApiError) return // Eagle not running or item missing — expected
-          console.error('Eagle: unexpected error during lazy cache sync', { itemId, ext, err })
+          this.log.error('unexpected error during lazy cache sync', err)
         }
       }),
     )
@@ -458,23 +483,23 @@ export default class EaglePlugin extends Plugin {
 
         if (exists === false && isCached) {
           // Item confirmed deleted from Eagle — evict from cache
-          console.log('Eagle: evicting deleted item from cache', { itemId, file: file.path })
+          this.log.info('evicting deleted item from cache', { itemId, file: file.path })
           await this._cacheManager.removeCache(itemId, ext)
         } else if (exists === true && !isCached) {
           // Cache file absent but item exists (cache cleared, synced from another device) — backfill
           try {
             const fileUrl = await this._eagleUploader.getFileUrlForItemId(itemId)
             if (!fileUrl.startsWith('file://')) {
-              console.debug('Eagle: syncCacheForFile backfill skipped — non-local URL', { itemId, fileUrl })
+              this.log.debug('syncCacheForFile backfill skipped — non-local URL', { itemId })
               return
             }
             await this._cacheManager.cacheFromOsPath(itemId, ext, fileUrlToOsPath(fileUrl))
           } catch (err) {
             if (err instanceof EagleApiError) {
-              console.debug('Eagle: syncCacheForFile backfill skipped — Eagle API error', { itemId })
+              this.log.debug('syncCacheForFile backfill skipped — Eagle API error', { itemId })
               return
             }
-            console.warn('Eagle: syncCacheForFile backfill failed', { itemId, err })
+            this.log.warn('syncCacheForFile backfill failed', { itemId })
           }
         }
       }),
@@ -482,7 +507,7 @@ export default class EaglePlugin extends Plugin {
 
     for (const result of results) {
       if (result.status === 'rejected') {
-        console.error('Eagle: syncCacheForFile token processing failed', result.reason)
+        this.log.error('syncCacheForFile token processing failed', result.reason)
       }
     }
   }
@@ -512,7 +537,7 @@ export default class EaglePlugin extends Plugin {
             if (url.startsWith('file://')) img.src = fileUrlToDisplayUrl(url)
           } catch (err) {
             if (!(err instanceof EagleApiError)) {
-              console.error('Eagle: unexpected error during image recovery', { itemId, err })
+              this.log.error('unexpected error during image recovery', err)
             }
           }
         }
@@ -565,24 +590,24 @@ export default class EaglePlugin extends Plugin {
       const ext = item.ext || extractFileExtension(fileUrl) || 'jpg'
       if (fileUrl.startsWith('file://')) {
         await this._cacheManager.cacheFromOsPath(item.id, ext, fileUrlToOsPath(fileUrl)).catch((e) => {
-          console.warn('Eagle: cache write failed — image may appear broken', e)
+          this.log.warn('cache write failed — image may appear broken', {})
         })
       }
       const markdownImage = this.markdownImageFor(item.id, ext)
       editor.replaceRange(markdownImage, editor.getCursor())
     } catch (error) {
       if (error instanceof EagleApiError) {
-        new Notice(`Failed to import from Eagle: ${error.message}`)
+        this.notices.show('import_failed_api', { message: error.message })
       } else {
-        console.error('Unexpected error while importing Eagle image:', error)
-        new Notice('Failed to insert Eagle image.')
+        this.log.error('Unexpected error while importing Eagle image', error)
+        this.notices.show('import_failed')
       }
     }
   }
 
   private async uploadFileAndEmbedEagleImage(file: File, atPos?: EditorPosition) {
     if (!this.activeEditor) {
-      new Notice('Eagle: no active editor — cannot upload.')
+      this.notices.show('no_active_editor')
       return
     }
     const pasteId = generatePseudoRandomId()
@@ -614,12 +639,12 @@ export default class EaglePlugin extends Plugin {
         if (dedupLibraryPath) {
           const existingItemId = this._hashStore.lookup(dedupHash, dedupLibraryPath)
           if (existingItemId) {
-            new Notice('Eagle: duplicate detected, reusing existing item')
+            this.notices.show('duplicate_detected')
             const fileUrl = await this._eagleUploader.getFileUrlForItemId(existingItemId, controller.signal)
             const ext = fileUrl.startsWith('file://') ? (extractFileExtension(fileUrl) || 'jpg') : 'jpg'
             if (fileUrl.startsWith('file://')) {
               await this._cacheManager.cacheFromOsPath(existingItemId, ext, fileUrlToOsPath(fileUrl)).catch((e) => {
-                console.warn('Eagle: cache write failed — image may appear broken', e)
+                this.log.warn('cache write failed — image may appear broken', {})
               })
             }
             markdownImage = this.markdownImageFor(existingItemId, ext)
@@ -634,7 +659,7 @@ export default class EaglePlugin extends Plugin {
 
       if (fileUrl.startsWith('file://')) {
         await this._cacheManager.cacheFromOsPath(itemId, ext, fileUrlToOsPath(fileUrl)).catch((e) => {
-          console.warn('Eagle: cache write failed — image may appear broken', e)
+          this.log.warn('cache write failed — image may appear broken', {})
         })
       }
 
@@ -642,7 +667,7 @@ export default class EaglePlugin extends Plugin {
       if (dedupHash && dedupLibraryPath) {
         this._hashStore.store(dedupHash, itemId, dedupLibraryPath)
         await this._hashStore.save(this).catch((e) => {
-          console.warn('Eagle: failed to store upload hash', e)
+          this.log.warn('failed to store upload hash', {})
         })
       }
 
@@ -654,11 +679,11 @@ export default class EaglePlugin extends Plugin {
         return markdownImage
       }
       if (e instanceof EagleApiError) {
-        console.error('Eagle upload failed:', e.message)
+        this.log.error('Eagle upload failed', e)
         modal.showError(`Upload failed: ${e.message}`)
         this.handleFailedUpload(pasteId, `Eagle upload failed, API returned an error: ${e.message}`)
       } else {
-        console.error('Failed upload request: ', e)
+        this.log.error('Failed upload request', e)
         modal.showError('Upload failed — check the developer console for details.')
         this.handleFailedUpload(pasteId, '⚠️Eagle upload failed, check dev console')
       }
@@ -746,8 +771,8 @@ export default class EaglePlugin extends Plugin {
           try {
             await this.app.vault.adapter.rename(srcPath, destPath)
             movedFiles++
-          } catch (err) {
-            console.warn('Eagle: failed to move cache file', { srcPath, err })
+          } catch {
+            this.log.warn('failed to move cache file', { srcPath })
           }
         }),
       )
@@ -757,10 +782,12 @@ export default class EaglePlugin extends Plugin {
       // oldFolder doesn't exist or is empty — that's fine
     }
 
-    new Notice(
-      `Eagle: Moved cache to '${newFolder}'. Updated ${updatedLinks} link(s) in ${updatedFiles} file(s), moved ${movedFiles} file(s).`,
-      10000,
-    )
+    this.notices.show('cache_renamed', {
+      newFolder,
+      linksCount: updatedLinks,
+      filesCount: updatedFiles,
+      movedFiles,
+    })
   }
 
   resolveTargetEagleFolderForActiveFile(): string | undefined {

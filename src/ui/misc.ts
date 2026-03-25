@@ -1,10 +1,13 @@
 import { EditorPosition, ReferenceCache } from 'obsidian'
 
+import { PluginLogger } from '../shared/plugin-logger'
 import {
   detectImageFormat,
   isRenderableImageExtension,
   replaceFileExtension,
 } from '../utils/image-format'
+
+const log = new PluginLogger('Eagle')
 
 function passesInstanceofCheck(image: File): boolean {
   return image instanceof File
@@ -62,8 +65,7 @@ export async function normalizeImageForUpload(image: File): Promise<File> {
   // Eagle handles native formats (HEIC, TIFF, etc.) natively — no conversion needed.
   // Log unrecognized formats so upload failures are easier to trace.
   if (!detected.recognized) {
-    // eslint-disable-next-line no-console
-    console.warn('Eagle: image format not recognized, passing to Eagle as-is', {
+    log.warn('image format not recognized, passing to Eagle as-is', {
       name: image.name,
       type: image.type,
     })

@@ -14,6 +14,7 @@ import type EaglePlugin from '../main'
 
 import { resolveDestinationPreview, sanitizeFolderMappings } from '../domain/folder-mapping'
 import { ObsidianEagleFolderMapping } from '../domain/settings'
+import { PluginLogger } from '../shared/plugin-logger'
 import { EagleFolderWithPath } from './EagleUploader'
 import RenameCacheModal from './RenameCacheModal'
 import VaultFolderSuggestModal from './VaultFolderSuggestModal'
@@ -35,6 +36,7 @@ function formatBytes(bytes: number): string {
 
 export default class EaglePluginSettingsTab extends PluginSettingTab {
   plugin: EaglePlugin
+  private readonly log = new PluginLogger('Eagle')
   private originalCacheFolderName = ''
   private previewDescEl: HTMLElement | null = null
   private leafChangeRef: EventRef | null = null
@@ -88,7 +90,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
       .setName('Test connection')
       .setDesc('Verify that Eagle is reachable with the current host and port.')
       .addButton((btn) => {
-        btn.setButtonText('Test Connection').onClick(async () => {
+        btn.setButtonText('Test connection').onClick(async () => {
           btn.setDisabled(true)
           btn.setButtonText('Testing…')
           const connected = await this.plugin.eagleUploader.isConnected()
@@ -99,7 +101,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
             this.plugin.notices.show('connection_fail')
           }
           btn.setDisabled(false)
-          btn.setButtonText('Test Connection')
+          btn.setButtonText('Test connection')
         })
       })
 
@@ -206,7 +208,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
           const basePath = typeof adapter.getBasePath === 'function' ? adapter.getBasePath() : ''
           if (!basePath) return
           const folderPath = `${basePath}/${this.plugin.settings.cacheFolderName}`
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          // eslint-disable-next-line @typescript-eslint/no-require-imports -- electron must be loaded via require() in Obsidian's Node context
           const { shell } = require('electron') as typeof import('electron')
           void shell.openPath(folderPath)
         }),
@@ -277,8 +279,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
     } catch (err) {
       if (badge) this.updateConnectionBadge(badge, false)
       if (!(err instanceof Error && err.message.includes('connect'))) {
-        // eslint-disable-next-line no-console
-        console.error('Eagle: unexpected error while loading folder list', err)
+        this.log.error('unexpected error while loading folder list', err)
       }
       return []
     }

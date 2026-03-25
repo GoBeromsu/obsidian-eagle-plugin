@@ -1,5 +1,7 @@
 import { Plugin } from 'obsidian'
 
+import { PluginLogger } from '../shared/plugin-logger'
+
 interface HashEntry {
   itemId: string
   libraryPath: string
@@ -15,6 +17,7 @@ const STORE_KEY = 'eagle-hash-store'
 const STORE_VERSION = 1
 
 export default class EagleHashStore {
+  private readonly log = new PluginLogger('Eagle')
   private data: EagleHashStoreData = { version: STORE_VERSION, entries: {} }
 
   lookup(hash: string, libraryPath: string): string | null {
@@ -51,8 +54,7 @@ export default class EagleHashStore {
         }
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn('EagleHashStore: failed to load', err)
+      this.log.warn('failed to load hash store', { err: String(err) })
     }
   }
 
@@ -61,8 +63,7 @@ export default class EagleHashStore {
       const existing = ((await plugin.loadData()) as Record<string, unknown>) ?? {}
       await plugin.saveData({ ...existing, [STORE_KEY]: this.data })
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn('EagleHashStore: failed to save', err)
+      this.log.warn('failed to save hash store', { err: String(err) })
     }
   }
 

@@ -6,6 +6,7 @@ import type { NodeDataAdapter } from '../types/obsidian'
 
 import EagleApiError from '../domain/EagleApiError'
 import { EaglePluginSettings } from '../domain/settings'
+import { PluginLogger } from '../shared/plugin-logger'
 import { extractFileExtension } from '../utils/image-format'
 import { generatePseudoRandomId } from '../utils/pseudo-random'
 import { normalizeEagleApiPathToFileUrl, resolveEagleThumbnailUrl } from './file-url'
@@ -90,6 +91,7 @@ interface EagleRawItemCandidate extends Partial<EagleItemSearchResult> {
 }
 
 export default class EagleUploader {
+  private readonly log = new PluginLogger('Eagle')
   private readonly app: App
   private readonly settings: EaglePluginSettings
   private folderIdCache: Map<string, string> = new Map<string, string>()
@@ -203,8 +205,7 @@ export default class EagleUploader {
       if (fs?.unlink) {
         fs.unlink(tempFilePath, (err: NodeJS.ErrnoException | null) => {
           if (err && err.code !== 'ENOENT') {
-            // eslint-disable-next-line no-console
-            console.warn('Eagle: failed to delete temp file', { tempFilePath, code: err.code, message: err.message })
+            this.log.warn('failed to delete temp file', { tempFilePath, code: err.code, message: err.message })
           }
         })
       }
@@ -311,17 +312,14 @@ export default class EagleUploader {
     const infoData = await this.requestJson<{ status: string; data?: { name?: string; ext?: string } }>(infoUrl, 'GET', undefined, signal)
 
     if (infoData?.status !== 'success') {
-      // eslint-disable-next-line no-console
-      console.warn('Eagle: item/info returned non-success', { itemId, status: infoData?.status })
+      this.log.warn('item/info returned non-success', { itemId, status: infoData?.status })
     } else if (!infoData.data?.name || !infoData.data?.ext) {
-      // eslint-disable-next-line no-console
-      console.warn('Eagle: item/info response missing name/ext', { itemId, data: infoData.data })
+      this.log.warn('item/info response missing name/ext', { itemId })
     } else {
       const { name, ext } = infoData.data
       const libraryRoot = await this.getLibraryRootPath(signal)
       if (!libraryRoot) {
-        // eslint-disable-next-line no-console
-        console.warn('Eagle: cannot resolve library root — falling back to eagle:// URL', { itemId })
+        this.log.warn('cannot resolve library root — falling back to eagle:// URL', { itemId })
       } else {
         const filePath = `${libraryRoot}/images/${itemId}.info/${name}.${ext}`
         return normalizeEagleApiPathToFileUrl(filePath)
@@ -503,8 +501,7 @@ export default class EagleUploader {
       await this.getLibraryRootPath()
       return true
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.debug('Eagle: isConnected check failed', err)
+      this.log.debug('isConnected check failed', { err: String(err) })
       return false
     }
   }
@@ -521,8 +518,7 @@ export default class EagleUploader {
       const data = await this.requestJson<{ status: string; data?: { isDeleted?: boolean } }>(url, 'GET')
       return data.status === 'success' && !data.data?.isDeleted
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.debug('Eagle: itemExists check failed — treating as uncertain', { itemId, err })
+      this.log.debug('itemExists check failed — treating as uncertain', { itemId, err: String(err) })
       return null
     }
   }

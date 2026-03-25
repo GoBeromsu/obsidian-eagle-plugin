@@ -303,7 +303,7 @@ export default class EaglePlugin extends Plugin {
 
   private addUploadLocalCommand() {
     this.addCommand({
-      id: 'eagle-upload-local',
+      id: 'upload-local',
       name: 'Upload to Eagle',
       editorCheckCallback: this.editorCheckCallbackForLocalUpload,
     })
@@ -311,16 +311,16 @@ export default class EaglePlugin extends Plugin {
 
   private addImportFromEagleLibraryCommand() {
     this.addCommand({
-      id: 'eagle-import-from-library',
-      name: 'Eagle: Insert image from Eagle (search)',
+      id: 'import-from-library',
+      name: 'Insert image from Eagle (search)',
       editorCheckCallback: this.editorCheckCallbackForLibraryImport,
     })
   }
 
   private addMigrateAllImagesCommand() {
     this.addCommand({
-      id: 'eagle-migrate-all-images',
-      name: 'Eagle: Migrate all images to eagle-cache',
+      id: 'migrate-all-images',
+      name: 'Migrate all images to eagle-cache',
       callback: () => {
         void this.migrateAllImages()
       },

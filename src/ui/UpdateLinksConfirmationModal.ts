@@ -21,11 +21,11 @@ export default class UpdateLinksConfirmationModal extends Modal {
     this.doNotUpdateButton = new ButtonComponent(buttonsDiv).setButtonText('Do not update')
   }
 
-  onDoUpdateClick(callback: (evt: MouseEvent) => any) {
+  onDoUpdateClick(callback: (evt: MouseEvent) => void) {
     this.updateOnceButton.onClick(callback)
   }
 
-  onDoNotUpdateClick(callback: (evt: MouseEvent) => any) {
+  onDoNotUpdateClick(callback: (evt: MouseEvent) => void) {
     this.doNotUpdateButton.onClick(callback)
   }
 

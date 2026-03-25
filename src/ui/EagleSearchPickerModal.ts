@@ -1,6 +1,7 @@
 import { App, Modal, TextComponent } from 'obsidian'
 
 import EagleApiError from '../domain/EagleApiError'
+import { PluginLogger } from '../shared/plugin-logger'
 import EagleUploader, { EagleItemSearchResult } from './EagleUploader'
 import { fileUrlToDisplayUrl } from './file-url'
 
@@ -10,6 +11,7 @@ const THUMBNAIL_CONCURRENCY = 6
 type PickerStatus = 'idle' | 'loading' | 'error' | 'info'
 
 export default class EagleSearchPickerModal extends Modal {
+  private readonly log = new PluginLogger('Eagle')
   private readonly uploader: EagleUploader
   private readonly onChoose: (item: EagleItemSearchResult) => void
   private readonly debugSearchDiagnostics: boolean
@@ -84,13 +86,12 @@ export default class EagleSearchPickerModal extends Modal {
     this.contentEl.empty()
   }
 
-  private debugLog(...args: unknown[]): void {
+  private debugLog(message: string, data?: Record<string, unknown>): void {
     if (!this.debugSearchDiagnostics) {
       return
     }
 
-    // eslint-disable-next-line no-console
-    console.log('[EagleSearchPicker]', ...args)
+    this.log.debug(message, data)
   }
 
   private setStatus(text: string, status: PickerStatus): void {
@@ -174,8 +175,7 @@ export default class EagleSearchPickerModal extends Modal {
       const message = error instanceof Error ? error.message : String(error)
       this.debugLog('search:error', { token, keyword, message })
       if (!(error instanceof EagleApiError)) {
-        // eslint-disable-next-line no-console
-        console.error('Eagle: unexpected search error', { keyword, error })
+        this.log.error('unexpected search error', error)
       }
       this.results = []
       this.thumbFallbackMap.clear()
@@ -384,8 +384,7 @@ export default class EagleSearchPickerModal extends Modal {
               const message = error instanceof Error ? error.message : String(error)
               this.debugLog('thumbnail:fallback:error', { token, itemId: item.id, message })
               if (!(error instanceof EagleApiError)) {
-                // eslint-disable-next-line no-console
-              console.error('Eagle: unexpected thumbnail load failure', { itemId: item.id, error })
+                this.log.error('unexpected thumbnail load failure', error)
               }
             }
           }

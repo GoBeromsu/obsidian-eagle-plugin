@@ -26,7 +26,6 @@ async function eagleCanvasPaste(
     return
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
   const canvas: Canvas = this.canvas
 
   try {

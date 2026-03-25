@@ -39,7 +39,7 @@ declare module 'obsidian' {
 
   interface Canvas {
     posCenter(): Point
-    createTextNode(n: NewTextNode): any
+    createTextNode(n: NewTextNode): unknown
   }
 
   interface NewTextNode {

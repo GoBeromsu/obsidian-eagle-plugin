@@ -60,7 +60,7 @@
     "prettier": "^3.0.2",
     "tslib": "2.4.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.54.0",
+    "typescript-eslint": "^8.57.2",
     "vitest": "^0.34.6",
     "wdio-chromedriver-service": "^8.1.1"
   },

@@ -25,7 +25,7 @@ export default class RenameCacheModal extends Modal {
     const buttonsDiv = this.modalEl.createDiv('modal-button-container')
 
     new ButtonComponent(buttonsDiv)
-      .setButtonText('Move & Update')
+      .setButtonText('Move & update')
       .setCta()
       .onClick(() => {
         this.close()

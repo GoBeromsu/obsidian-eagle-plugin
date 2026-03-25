@@ -38,7 +38,7 @@ export default class EagleSearchPickerModal extends Modal {
     this.onChoose = onChoose
     this.debugSearchDiagnostics = debugSearchDiagnostics
     this.debounceMs = debounceMs
-    this.setTitle('Search Eagle library')
+    this.setTitle('Search eagle library')
   }
 
   onOpen(): void {
@@ -63,7 +63,7 @@ export default class EagleSearchPickerModal extends Modal {
 
     this.statusEl = contentEl.createEl('p', {
       cls: 'eagle-picker-status',
-      text: 'Type a keyword to search Eagle images.',
+      text: 'Type a keyword to search eagle images.',
     })
 
     this.gridEl = contentEl.createEl('div', { cls: 'eagle-picker-grid' })
@@ -128,7 +128,7 @@ export default class EagleSearchPickerModal extends Modal {
       this.results = []
       this.thumbFallbackMap.clear()
       this.renderGrid()
-      this.setStatus('Type a keyword to search Eagle images.', 'idle')
+      this.setStatus('Type a keyword to search eagle images.', 'idle')
       return
     }
 

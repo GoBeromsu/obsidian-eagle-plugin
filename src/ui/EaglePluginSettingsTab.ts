@@ -56,14 +56,14 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
     // ── Connection ──────────────────────────────────────────────────────────
     new Setting(containerEl).setHeading().setName('Connection')
 
-    const statusBadge = containerEl.createEl('div', { cls: 'eagle-connection-status', text: '○ Checking…' })
+    const statusBadge = containerEl.createEl('div', { cls: 'eagle-connection-status', text: '○ checking…' })
 
     new Setting(containerEl)
       .setName('Eagle API host')
-      .setDesc('The host for your running Eagle instance.')
+      .setDesc('The host for your running eagle instance.')
       .addText((text) =>
         text
-          .setPlaceholder('localhost')
+          .setPlaceholder('Localhost')
           .setValue(this.plugin.settings.eagleHost)
           .onChange((value) => {
             this.plugin.settings.eagleHost = value
@@ -73,7 +73,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Eagle API port')
-      .setDesc('The port for your running Eagle instance.')
+      .setDesc('The port for your running eagle instance.')
       .addText((text) =>
         text
           .setPlaceholder('41595')
@@ -86,7 +86,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Test connection')
-      .setDesc('Verify that Eagle is reachable with the current host and port.')
+      .setDesc('Verify that eagle is reachable with the current host and port.')
       .addButton((btn) => {
         btn.setButtonText('Test connection').onClick(async () => {
           btn.setDisabled(true)
@@ -109,7 +109,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
     const folderSetting = new Setting(containerEl)
       .setName('Eagle folder name')
       .setDesc(
-        'The folder name in Eagle where images will be saved. Leave empty to save to the default folder.',
+        'The folder name in eagle where images will be saved. Leave empty to save to the default folder.',
       )
 
     folderSetting.addText((text) =>
@@ -140,7 +140,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Deduplicate uploads')
-      .setDesc('Skip uploading images that already exist in Eagle (matched by file hash).')
+      .setDesc('Skip uploading images that already exist in eagle (matched by file hash).')
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.settings.deduplicateUploads)
@@ -167,12 +167,12 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Cache folder')
       .setDesc(
-        "Images are cached here (supports subfolders: '80. References/07. eagle'). After renaming, confirm to move existing images.",
+        "Images are cached here (supports subfolders: '80. References/07. Eagle'). After renaming, confirm to move existing images.",
       )
       .addText((text) => {
         cacheTextComponent = text
         text
-          .setPlaceholder('eagle-cache')
+          .setPlaceholder('Eagle-cache')
           .setValue(this.plugin.settings.cacheFolderName)
           .onChange((value) => {
             this.plugin.settings.cacheFolderName = value.trim() || 'eagle-cache'
@@ -262,10 +262,10 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
     badge.removeClass('is-connected', 'is-disconnected')
     if (connected) {
       badge.addClass('is-connected')
-      badge.setText('● Connected')
+      badge.setText('● connected')
     } else {
       badge.addClass('is-disconnected')
-      badge.setText('● Disconnected')
+      badge.setText('● disconnected')
     }
   }
 
@@ -309,7 +309,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
     containerEl: HTMLElement,
     eagleFoldersPromise: Promise<EagleFolderList>,
   ): void {
-    new Setting(containerEl).setHeading().setName('Folder mapping (Obsidian → Eagle)')
+    new Setting(containerEl).setHeading().setName('Folder mapping (Obsidian → eagle)')
     containerEl.createEl('p', {
       cls: 'eagle-folder-mapping-description',
       text: 'Route uploads by active note folder. Longest matching folder rule is applied.',
@@ -323,7 +323,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
       if (this.plugin.settings.folderMappings.length === 0) {
         listContainer.createEl('p', {
           cls: 'eagle-folder-mapping-empty',
-          text: 'No mappings yet. Add one to route specific Obsidian folders to Eagle folders.',
+          text: 'No mappings yet. Add one to route specific Obsidian folders to eagle folders.',
         })
         return
       }
@@ -408,7 +408,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
       const dropdown = new DropdownComponent(eagleControlDiv)
       dropdown.selectEl.addClass('eagle-folder-mapping-input')
 
-      dropdown.addOption('', '— pick Eagle folder —')
+      dropdown.addOption('', '— pick eagle folder —')
       for (const f of folders) {
         dropdown.addOption(f.path, f.path)
       }

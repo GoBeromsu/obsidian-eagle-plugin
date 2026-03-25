@@ -27,7 +27,8 @@ export class PluginLogger {
 		if (error instanceof Error) {
 			suffix = ` | ${error.message}`;
 		} else if (error !== undefined && error !== null) {
-			suffix = ` | ${typeof error === 'object' ? JSON.stringify(error) : String(error)}`;
+			const repr: string = typeof error === 'object' ? JSON.stringify(error) : String(error);
+			suffix = ` | ${repr}`;
 		}
 		console.error(`[${this.prefix}] error | ${message}${suffix}`);
 	}

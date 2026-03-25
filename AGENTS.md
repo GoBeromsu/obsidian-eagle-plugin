@@ -1,3 +1,6 @@
+<!-- Parent: ../AGENTS.md -->
+<!-- Generated: 2026-03-25 | Updated: 2026-03-25 -->
+
 Eagle Plugin for Obsidian — uploads images to Eagle instead of storing them locally in the vault.
 
 ## Build Commands

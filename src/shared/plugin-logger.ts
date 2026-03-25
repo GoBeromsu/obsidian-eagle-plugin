@@ -15,7 +15,7 @@ export class PluginLogger {
 	}
 
 	info(message: string, data?: Record<string, unknown>): void {
-		console.info(this.format('info', message, data));
+		console.debug(this.format('info', message, data));
 	}
 
 	warn(message: string, data?: Record<string, unknown>): void {

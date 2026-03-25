@@ -2,6 +2,8 @@ import { tmpdir } from 'os'
 
 import { App, requestUrl } from 'obsidian'
 
+import type { NodeDataAdapter } from '../types/obsidian'
+
 import EagleApiError from '../domain/EagleApiError'
 import { EaglePluginSettings } from '../domain/settings'
 import { extractFileExtension } from '../utils/image-format'
@@ -197,10 +199,8 @@ export default class EagleUploader {
       const ext = extFromUrl || extractFileExtension(image.name) || 'jpg'
       return { itemId, fileUrl, ext }
     } finally {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-      const fs = (this.app.vault?.adapter as any)?.fs
+      const fs = (this.app.vault?.adapter as unknown as NodeDataAdapter)?.fs
       if (fs?.unlink) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         fs.unlink(tempFilePath, (err: NodeJS.ErrnoException | null) => {
           if (err && err.code !== 'ENOENT') {
             // eslint-disable-next-line no-console
@@ -213,14 +213,14 @@ export default class EagleUploader {
 
   private async saveToTempFile(image: File): Promise<string> {
     const tempFileName = `eagle-temp-${generatePseudoRandomId()}.${image.name.split('.').pop()}`
-    const adapter = this.app.vault.adapter as any
+    const adapter = this.app.vault.adapter as unknown as NodeDataAdapter
     const osTempDir = tmpdir()
     const tempFilePath = adapter.path.join(osTempDir, tempFileName)
     const arrayBuffer = await image.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
     return new Promise((resolve, reject) => {
-      adapter.fs.writeFile(tempFilePath, buffer, (err: any) => {
+      adapter.fs.writeFile(tempFilePath, buffer, (err: NodeJS.ErrnoException | null) => {
         if (err) {
           reject(err instanceof Error ? err : new Error(String(err)))
           return

@@ -11,17 +11,14 @@ export class PluginLogger {
 
 	debug(message: string, data?: Record<string, unknown>): void {
 		if (!this.isDebug()) return;
-		// eslint-disable-next-line no-console
 		console.debug(this.format('debug', message, data));
 	}
 
 	info(message: string, data?: Record<string, unknown>): void {
-		// eslint-disable-next-line no-console
 		console.info(this.format('info', message, data));
 	}
 
 	warn(message: string, data?: Record<string, unknown>): void {
-		// eslint-disable-next-line no-console
 		console.warn(this.format('warn', message, data));
 	}
 
@@ -32,7 +29,6 @@ export class PluginLogger {
 		} else if (error) {
 			suffix = ` | ${String(error)}`;
 		}
-		// eslint-disable-next-line no-console
 		console.error(`[${this.prefix}] error | ${message}${suffix}`);
 	}
 

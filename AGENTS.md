@@ -98,3 +98,14 @@ src/
 - Cache sync: never evicts on uncertain failures (`itemExists()` returns `null` on network error)
 - Image format in notes: `![[eagle-cache/ITEMID.EXT]]` (wikilink embed, vault-relative); old format `![eagle:ID](file://...)` kept for backward compat
 - `shared/` files are synced from `obsidian-boiler-template` via `pnpm sync:plugins` — do not edit manually; changes will be overwritten
+
+## Subdirectories
+
+| Directory | Purpose |
+|-----------|---------|
+| `src/` | All source layers (see `src/AGENTS.md`) |
+| `src/domain/` | Business logic — NO obsidian imports (see `src/domain/AGENTS.md`) |
+| `src/ui/` | Obsidian-dependent views, modals, settings, API client (see `src/ui/AGENTS.md`) |
+| `src/types/` | Pure type definitions (see `src/types/AGENTS.md`) |
+| `src/utils/` | Pure utility functions (see `src/utils/AGENTS.md`) |
+| `src/shared/` | Boiler-template synced files — DO NOT EDIT (see `src/shared/AGENTS.md`) |

@@ -1,5 +1,21 @@
 import 'obsidian'
 
+/** Shape of the internal Node.js fs/path fields exposed by Obsidian's desktop adapter. */
+export interface NodeAdapterFs {
+  readFile(path: string, callback: (err: NodeJS.ErrnoException | null, buffer: Buffer) => void): void
+  writeFile(path: string, data: Buffer, callback: (err: NodeJS.ErrnoException | null) => void): void
+  unlink(path: string, callback: (err: NodeJS.ErrnoException | null) => void): void
+}
+
+export interface NodeAdapterPath {
+  join(...parts: string[]): string
+}
+
+export interface NodeDataAdapter {
+  fs: NodeAdapterFs
+  path: NodeAdapterPath
+}
+
 declare module 'obsidian' {
   interface MarkdownSubView {
     clipboardManager: ClipboardManager

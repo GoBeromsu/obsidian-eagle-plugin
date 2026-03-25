@@ -1,5 +1,7 @@
 import { App } from 'obsidian'
 
+import type { NodeDataAdapter } from '../types/obsidian'
+
 export interface CacheStats {
   fileCount: number
   totalSizeBytes: number
@@ -81,9 +83,9 @@ export default class EagleCacheManager {
 
   async cacheFromOsPath(itemId: string, ext: string, absolutePath: string): Promise<void> {
     await this.ensureCacheFolder()
-    const adapter = this.app.vault.adapter as any
+    const adapter = this.app.vault.adapter as unknown as NodeDataAdapter
     const data = await new Promise<ArrayBuffer>((resolve, reject) => {
-      adapter.fs.readFile(absolutePath, (err: any, buffer: Buffer) => {
+      adapter.fs.readFile(absolutePath, (err: NodeJS.ErrnoException | null, buffer: Buffer) => {
         if (err) {
           reject(err instanceof Error ? err : new Error(String(err)))
           return

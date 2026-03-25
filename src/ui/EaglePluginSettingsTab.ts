@@ -51,15 +51,15 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
 
     containerEl.empty()
 
-    containerEl.createEl('h2', { text: 'Eagle Plugin Settings' })
+    new Setting(containerEl).setHeading().setName('Eagle plugin settings')
 
     // ── Connection ──────────────────────────────────────────────────────────
-    containerEl.createEl('h3', { text: 'Connection' })
+    new Setting(containerEl).setHeading().setName('Connection')
 
     const statusBadge = containerEl.createEl('div', { cls: 'eagle-connection-status', text: '○ Checking…' })
 
     new Setting(containerEl)
-      .setName('Eagle API Host')
+      .setName('Eagle API host')
       .setDesc('The host for your running Eagle instance.')
       .addText((text) =>
         text
@@ -72,7 +72,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
       )
 
     new Setting(containerEl)
-      .setName('Eagle API Port')
+      .setName('Eagle API port')
       .setDesc('The port for your running Eagle instance.')
       .addText((text) =>
         text
@@ -104,10 +104,10 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
       })
 
     // ── Upload ───────────────────────────────────────────────────────────────
-    containerEl.createEl('h3', { text: 'Upload' })
+    new Setting(containerEl).setHeading().setName('Upload')
 
     const folderSetting = new Setting(containerEl)
-      .setName('Eagle Folder Name')
+      .setName('Eagle folder name')
       .setDesc(
         'The folder name in Eagle where images will be saved. Leave empty to save to the default folder.',
       )
@@ -160,7 +160,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
     })
 
     // ── Cache ────────────────────────────────────────────────────────────────
-    containerEl.createEl('h3', { text: 'Cache' })
+    new Setting(containerEl).setHeading().setName('Cache')
 
     let cacheTextComponent: TextComponent
 
@@ -226,7 +226,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
     this.renderDestinationPreview(containerEl)
 
     // ── Search ───────────────────────────────────────────────────────────────
-    containerEl.createEl('h3', { text: 'Search' })
+    new Setting(containerEl).setHeading().setName('Search')
 
     new Setting(containerEl)
       .setName('Search debounce delay')
@@ -243,7 +243,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
       )
 
     // ── Debug ─────────────────────────────────────────────────────────────────
-    containerEl.createEl('h3', { text: 'Debug' })
+    new Setting(containerEl).setHeading().setName('Debug')
 
     new Setting(containerEl)
       .setName('Search diagnostics')
@@ -310,7 +310,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
     containerEl: HTMLElement,
     eagleFoldersPromise: Promise<EagleFolderList>,
   ): void {
-    containerEl.createEl('h3', { text: 'Folder Mapping (Obsidian → Eagle)' })
+    new Setting(containerEl).setHeading().setName('Folder mapping (Obsidian → Eagle)')
     containerEl.createEl('p', {
       cls: 'eagle-folder-mapping-description',
       text: 'Route uploads by active note folder. Longest matching folder rule is applied.',
@@ -447,7 +447,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
       this.leafChangeRef = null
     }
 
-    containerEl.createEl('h3', { text: 'Destination Preview' })
+    new Setting(containerEl).setHeading().setName('Destination preview')
 
     const setting = new Setting(containerEl)
       .setName('Current upload destination')

@@ -53,8 +53,6 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
 
     containerEl.empty()
 
-    new Setting(containerEl).setHeading().setName('Eagle plugin settings')
-
     // ── Connection ──────────────────────────────────────────────────────────
     new Setting(containerEl).setHeading().setName('Connection')
 

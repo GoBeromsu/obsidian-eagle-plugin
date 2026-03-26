@@ -4,6 +4,7 @@ import { PluginLogger } from '../shared/plugin-logger'
 
 interface HashEntry {
   itemId: string
+  displayName: string
   libraryPath: string
   uploadedAt: number
 }
@@ -20,15 +21,15 @@ export default class EagleHashStore {
   private readonly log = new PluginLogger('Eagle')
   private data: EagleHashStoreData = { version: STORE_VERSION, entries: {} }
 
-  lookup(hash: string, libraryPath: string): string | null {
+  lookup(hash: string, libraryPath: string): { itemId: string; displayName: string } | null {
     const entry = this.data.entries[hash]
     if (!entry) return null
     if (entry.libraryPath !== libraryPath) return null
-    return entry.itemId
+    return { itemId: entry.itemId, displayName: entry.displayName ?? '' }
   }
 
-  store(hash: string, itemId: string, libraryPath: string): void {
-    this.data.entries[hash] = { itemId, libraryPath, uploadedAt: Date.now() }
+  store(hash: string, itemId: string, displayName: string, libraryPath: string): void {
+    this.data.entries[hash] = { itemId, displayName, libraryPath, uploadedAt: Date.now() }
   }
 
   evict(hash: string): void {

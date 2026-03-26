@@ -507,6 +507,21 @@ export default class EagleUploader {
   }
 
   /**
+   * Returns the display name of the Eagle item, or `null` if it cannot be resolved
+   * (Eagle unreachable, item missing, or name field absent).
+   */
+  async getItemName(itemId: string): Promise<string | null> {
+    try {
+      const { eagleHost, eaglePort } = this.settings
+      const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.ITEM_INFO}?id=${itemId}`
+      const data = await this.requestJson<{ status: string; data?: { name?: string } }>(url, 'GET')
+      return (data.status === 'success' && data.data?.name) ? data.data.name : null
+    } catch {
+      return null
+    }
+  }
+
+  /**
    * Returns `true` if the item exists and is not deleted, `false` if confirmed absent,
    * or `null` if the check failed (Eagle unreachable, network error, server error).
    * Callers must NOT evict cached files when this returns `null`.

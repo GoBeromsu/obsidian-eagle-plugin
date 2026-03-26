@@ -139,26 +139,41 @@ export function findMarkdownImageTokens(markdown: string): MarkdownImageToken[] 
 
 export interface WikilinkEmbedToken {
   itemId: string
+  displayName: string | undefined
   ext: string
   start: number
   end: number
 }
 
 /**
- * Finds Eagle wikilink embed tokens of the form: ![[CACHE_FOLDER/ITEMID.EXT]]
+ * Finds Eagle wikilink embed tokens of the form:
+ *   ![[CACHE_FOLDER/DISPLAYNAME_ITEMID.EXT]]  (new format)
+ *   ![[CACHE_FOLDER/ITEMID.EXT]]              (old format — backward compat)
+ *
+ * The filename stem is either `{displayName}_{itemId}` or bare `{itemId}`.
+ * `itemId` is always the last `_`-separated segment of the stem.
  * Skips fenced code blocks.
  */
 export function findEagleWikilinkTokens(markdown: string, cacheFolder: string): WikilinkEmbedToken[] {
   const tokens: WikilinkEmbedToken[] = []
   const codeRanges = fencedCodeBlockRanges(markdown)
   const escapedFolder = cacheFolder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  // Capture the full stem (everything before the last dot) and the extension.
   const pattern = new RegExp(`!\\[\\[${escapedFolder}\\/([^.\\]]+)\\.([^\\]]+)\\]\\]`, 'g')
 
   for (const match of markdown.matchAll(pattern)) {
     if (isOffsetInRanges(match.index, codeRanges)) continue
+    const stem = match[1]
+    const ext = match[2]
+    // If the stem contains `_`, the last segment is the itemId and everything
+    // before it is the displayName. Otherwise the whole stem is the itemId.
+    const underscoreIdx = stem.lastIndexOf('_')
+    const itemId = underscoreIdx !== -1 ? stem.slice(underscoreIdx + 1) : stem
+    const displayName = underscoreIdx !== -1 ? stem.slice(0, underscoreIdx) : undefined
     tokens.push({
-      itemId: match[1],
-      ext: match[2],
+      itemId,
+      displayName,
+      ext,
       start: match.index,
       end: match.index + match[0].length,
     })

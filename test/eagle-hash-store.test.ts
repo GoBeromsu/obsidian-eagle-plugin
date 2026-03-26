@@ -62,46 +62,52 @@ describe('EagleHashStore', () => {
 
     it('returns null when hash does not exist', () => {
       const store = new EagleHashStore()
-      store.store('known-hash', 'item-1', '/lib')
+      store.store('known-hash', 'item-1', 'screenshot', '/lib')
       expect(store.lookup('unknown-hash', '/lib')).toBeNull()
     })
 
-    it('returns the itemId when hash and libraryPath both match', () => {
+    it('returns the itemId and displayName when hash and libraryPath both match', () => {
       const store = new EagleHashStore()
-      store.store('hash-abc', 'item-42', '/my/library')
-      expect(store.lookup('hash-abc', '/my/library')).toBe('item-42')
+      store.store('hash-abc', 'item-42', 'my-image', '/my/library')
+      expect(store.lookup('hash-abc', '/my/library')).toEqual({ itemId: 'item-42', displayName: 'my-image' })
     })
 
     it('returns null when hash matches but libraryPath differs', () => {
       const store = new EagleHashStore()
-      store.store('hash-abc', 'item-42', '/library-a')
+      store.store('hash-abc', 'item-42', 'photo', '/library-a')
       expect(store.lookup('hash-abc', '/library-b')).toBeNull()
+    })
+
+    it('returns empty string for displayName when stored with empty displayName', () => {
+      const store = new EagleHashStore()
+      store.store('hash-x', 'item-1', '', '/lib')
+      expect(store.lookup('hash-x', '/lib')).toEqual({ itemId: 'item-1', displayName: '' })
     })
   })
 
   describe('store() + lookup() round-trip', () => {
     it('stores and retrieves multiple entries independently', () => {
       const store = new EagleHashStore()
-      store.store('hash-1', 'item-1', '/lib')
-      store.store('hash-2', 'item-2', '/lib')
+      store.store('hash-1', 'item-1', 'img-a', '/lib')
+      store.store('hash-2', 'item-2', 'img-b', '/lib')
 
-      expect(store.lookup('hash-1', '/lib')).toBe('item-1')
-      expect(store.lookup('hash-2', '/lib')).toBe('item-2')
+      expect(store.lookup('hash-1', '/lib')).toEqual({ itemId: 'item-1', displayName: 'img-a' })
+      expect(store.lookup('hash-2', '/lib')).toEqual({ itemId: 'item-2', displayName: 'img-b' })
     })
 
     it('overwrites an existing entry when the same hash is stored again', () => {
       const store = new EagleHashStore()
-      store.store('hash-x', 'old-item', '/lib')
-      store.store('hash-x', 'new-item', '/lib')
+      store.store('hash-x', 'old-item', 'old-name', '/lib')
+      store.store('hash-x', 'new-item', 'new-name', '/lib')
 
-      expect(store.lookup('hash-x', '/lib')).toBe('new-item')
+      expect(store.lookup('hash-x', '/lib')).toEqual({ itemId: 'new-item', displayName: 'new-name' })
     })
   })
 
   describe('evict()', () => {
     it('removes the entry so lookup returns null afterwards', () => {
       const store = new EagleHashStore()
-      store.store('hash-evict', 'item-evict', '/lib')
+      store.store('hash-evict', 'item-evict', 'evict-img', '/lib')
       store.evict('hash-evict')
       expect(store.lookup('hash-evict', '/lib')).toBeNull()
     })
@@ -119,7 +125,7 @@ describe('EagleHashStore', () => {
 
       // Inject a stale entry by manipulating internal data via store() then
       // patching uploadedAt via the internal data reference.
-      store.store('old-hash', 'old-item', '/lib')
+      store.store('old-hash', 'old-item', 'old-img', '/lib')
 
       // Access private data — acceptable in unit tests to set precise timestamps
       const data = (store as unknown as { data: { entries: Record<string, { uploadedAt: number }> } }).data
@@ -131,27 +137,27 @@ describe('EagleHashStore', () => {
 
     it('keeps entries newer than maxAgeDays', () => {
       const store = new EagleHashStore()
-      store.store('recent-hash', 'recent-item', '/lib')
+      store.store('recent-hash', 'recent-item', 'recent-img', '/lib')
 
       // Ensure the entry is only 1 day old
       const data = (store as unknown as { data: { entries: Record<string, { uploadedAt: number }> } }).data
       data.entries['recent-hash'].uploadedAt = Date.now() - 1 * 24 * 60 * 60 * 1000
 
       store.pruneOldEntries(90)
-      expect(store.lookup('recent-hash', '/lib')).toBe('recent-item')
+      expect(store.lookup('recent-hash', '/lib')).toEqual({ itemId: 'recent-item', displayName: 'recent-img' })
     })
 
     it('removes only expired entries when the store has a mix', () => {
       const store = new EagleHashStore()
-      store.store('old', 'old-item', '/lib')
-      store.store('new', 'new-item', '/lib')
+      store.store('old', 'old-item', 'old-img', '/lib')
+      store.store('new', 'new-item', 'new-img', '/lib')
 
       const data = (store as unknown as { data: { entries: Record<string, { uploadedAt: number }> } }).data
       data.entries['old'].uploadedAt = Date.now() - 200 * 24 * 60 * 60 * 1000
 
       store.pruneOldEntries(90)
       expect(store.lookup('old', '/lib')).toBeNull()
-      expect(store.lookup('new', '/lib')).toBe('new-item')
+      expect(store.lookup('new', '/lib')).toEqual({ itemId: 'new-item', displayName: 'new-img' })
     })
   })
 
@@ -161,12 +167,12 @@ describe('EagleHashStore', () => {
 
       const storeA = new EagleHashStore()
       await storeA.load(plugin as any)
-      storeA.store('persist-hash', 'persist-item', '/lib')
+      storeA.store('persist-hash', 'persist-item', 'persist-img', '/lib')
       await storeA.save(plugin as any)
 
       const storeB = new EagleHashStore()
       await storeB.load(plugin as any)
-      expect(storeB.lookup('persist-hash', '/lib')).toBe('persist-item')
+      expect(storeB.lookup('persist-hash', '/lib')).toEqual({ itemId: 'persist-item', displayName: 'persist-img' })
     })
 
     it('starts empty when no prior data exists', async () => {
@@ -181,7 +187,7 @@ describe('EagleHashStore', () => {
 
       const store = new EagleHashStore()
       await store.load(plugin as any)
-      store.store('h', 'item', '/lib')
+      store.store('h', 'item', 'img', '/lib')
       await store.save(plugin as any)
 
       const saved = plugin._getStore()
@@ -194,6 +200,23 @@ describe('EagleHashStore', () => {
       await store.load(plugin as any)
       // Should not throw and should behave as a fresh store
       expect(store.lookup('any', '/lib')).toBeNull()
+    })
+
+    it('gracefully handles old-format entries missing displayName field', async () => {
+      // Simulate data written by an older version of the plugin that had no displayName.
+      const oldFormatData = {
+        'eagle-hash-store': {
+          version: 1,
+          entries: {
+            'legacy-hash': { itemId: 'legacy-item', libraryPath: '/lib', uploadedAt: Date.now() },
+          },
+        },
+      }
+      const plugin = createPluginMock(oldFormatData)
+      const store = new EagleHashStore()
+      await store.load(plugin as any)
+      // Should return the entry with an empty displayName (not crash)
+      expect(store.lookup('legacy-hash', '/lib')).toEqual({ itemId: 'legacy-item', displayName: '' })
     })
   })
 })

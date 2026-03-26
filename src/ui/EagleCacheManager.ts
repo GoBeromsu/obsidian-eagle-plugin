@@ -18,18 +18,19 @@ export default class EagleCacheManager {
     this.cacheFolder = cacheFolder
   }
 
-  cachedVaultPath(itemId: string, ext: string): string {
-    return `${this.cacheFolder}/${itemId}.${ext}`
+  cachedVaultPath(itemId: string, ext: string, displayName?: string): string {
+    const filename = displayName ? `${displayName}_${itemId}` : itemId
+    return `${this.cacheFolder}/${filename}.${ext}`
   }
 
-  async isCached(itemId: string, ext: string): Promise<boolean> {
-    return this.app.vault.adapter.exists(this.cachedVaultPath(itemId, ext))
+  async isCached(itemId: string, ext: string, displayName?: string): Promise<boolean> {
+    return this.app.vault.adapter.exists(this.cachedVaultPath(itemId, ext, displayName))
   }
 
   /** Removes the cached file for the given item. No-op if the file does not exist. */
-  async removeCache(itemId: string, ext: string): Promise<void> {
-    if (await this.isCached(itemId, ext)) {
-      await this.app.vault.adapter.remove(this.cachedVaultPath(itemId, ext))
+  async removeCache(itemId: string, ext: string, displayName?: string): Promise<void> {
+    if (await this.isCached(itemId, ext, displayName)) {
+      await this.app.vault.adapter.remove(this.cachedVaultPath(itemId, ext, displayName))
     }
   }
 
@@ -76,12 +77,12 @@ export default class EagleCacheManager {
     }
   }
 
-  async cacheFromBuffer(itemId: string, ext: string, data: ArrayBuffer): Promise<void> {
+  async cacheFromBuffer(itemId: string, ext: string, data: ArrayBuffer, displayName?: string): Promise<void> {
     await this.ensureCacheFolder()
-    await this.app.vault.adapter.writeBinary(this.cachedVaultPath(itemId, ext), data)
+    await this.app.vault.adapter.writeBinary(this.cachedVaultPath(itemId, ext, displayName), data)
   }
 
-  async cacheFromOsPath(itemId: string, ext: string, absolutePath: string): Promise<void> {
+  async cacheFromOsPath(itemId: string, ext: string, absolutePath: string, displayName?: string): Promise<void> {
     await this.ensureCacheFolder()
     const adapter = this.app.vault.adapter as unknown as NodeDataAdapter
     const data = await new Promise<ArrayBuffer>((resolve, reject) => {
@@ -93,6 +94,6 @@ export default class EagleCacheManager {
         resolve(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer)
       })
     })
-    await this.app.vault.adapter.writeBinary(this.cachedVaultPath(itemId, ext), data)
+    await this.app.vault.adapter.writeBinary(this.cachedVaultPath(itemId, ext, displayName), data)
   }
 }

@@ -31,7 +31,7 @@ import UpdateLinksConfirmationModal from './ui/UpdateLinksConfirmationModal'
 import { allFilesAreImages } from './utils/FileList'
 import { extractFileExtension } from './utils/image-format'
 import { resolveItemName } from './utils/item-naming'
-import { applyTextReplacements, findEagleWikilinkTokens, findMarkdownImageTokens } from './utils/markdown-image'
+import { applyTextReplacements, findEagleWikilinkTokens, findMarkdownImageTokens, type WikilinkEmbedToken } from './utils/markdown-image'
 import { generatePseudoRandomId } from './utils/pseudo-random'
 
 const EAGLE_NOTICE_CATALOG: NoticeCatalog = {
@@ -259,6 +259,9 @@ export default class EaglePlugin extends Plugin {
     this._cacheManager = new EagleCacheManager(this.app, this._settings.cacheFolderName)
     this._hashStore = new EagleHashStore()
     await this._hashStore.load(this)
+    await this.migrateCacheFilesToReadableNames().catch((err) => {
+      this.log.error('cache filename migration failed', err)
+    })
     this.setupEagleHandlers()
     this.addUploadLocalCommand()
     this.addImportFromEagleLibraryCommand()
@@ -419,10 +422,95 @@ export default class EaglePlugin extends Plugin {
     this.notices.show('migrate_done', { count: migratedCount, folder: `${cacheFolderName}/`, failureSuffix })
   }
 
+  /**
+   * One-time migration: renames existing `{itemId}.{ext}` cache files to
+   * `{displayName}_{itemId}.{ext}` and updates all wikilinks in the vault.
+   * Requires Eagle to be running — silently skips items it cannot resolve.
+   */
+  private async migrateCacheFilesToReadableNames(): Promise<void> {
+    const cacheFolder = this._cacheManager.cacheFolder
+    const adapter = this.app.vault.adapter
+
+    // Collect all old-format tokens (stem has no underscore before the itemId).
+    // New-format tokens already have displayName set, so we skip them.
+    const tokensByFile = new Map<string, { file: ReturnType<typeof this.app.vault.getMarkdownFiles>[number]; content: string; tokens: WikilinkEmbedToken[] }>()
+
+    await Promise.all(
+      this.app.vault.getMarkdownFiles().map(async (file) => {
+        const content = await this.app.vault.read(file)
+        const oldTokens = findEagleWikilinkTokens(content, cacheFolder).filter((t) => t.displayName === undefined)
+        if (oldTokens.length > 0) tokensByFile.set(file.path, { file, content, tokens: oldTokens })
+      }),
+    )
+
+    if (tokensByFile.size === 0) return
+
+    // Fetch display names from Eagle for each unique itemId.
+    const uniqueIds = new Set<string>()
+    for (const { tokens } of tokensByFile.values()) {
+      for (const t of tokens) uniqueIds.add(t.itemId)
+    }
+
+    const nameMap = new Map<string, string>() // itemId → displayName
+    await Promise.allSettled(
+      Array.from(uniqueIds).map(async (itemId) => {
+        const name = await this._eagleUploader.getItemName(itemId)
+        if (name) nameMap.set(itemId, name)
+      }),
+    )
+
+    if (nameMap.size === 0) return
+
+    // Rename cache files on disk and collect wikilink replacements.
+    const renamedIds = new Set<string>()
+    await Promise.allSettled(
+      Array.from(nameMap.entries()).map(async ([itemId, displayName]) => {
+        // Find which ext this item uses by scanning the tokens we already have.
+        let ext: string | undefined
+        for (const { tokens } of tokensByFile.values()) {
+          const match = tokens.find((t) => t.itemId === itemId)
+          if (match) { ext = match.ext; break }
+        }
+        if (!ext) return
+
+        const oldPath = this._cacheManager.cachedVaultPath(itemId, ext)
+        const newPath = this._cacheManager.cachedVaultPath(itemId, ext, displayName)
+        if (oldPath === newPath) return
+
+        try {
+          if (await adapter.exists(oldPath)) {
+            await adapter.rename(oldPath, newPath)
+          }
+          renamedIds.add(itemId)
+        } catch {
+          this.log.warn('cache migration rename failed', { itemId })
+        }
+      }),
+    )
+
+    if (renamedIds.size === 0) return
+
+    // Update wikilinks in all affected vault files.
+    await Promise.allSettled(
+      Array.from(tokensByFile.values()).map(async ({ file, content, tokens }) => {
+        const replacements = tokens
+          .filter((t) => renamedIds.has(t.itemId))
+          .map((t) => {
+            const displayName = nameMap.get(t.itemId) ?? ''
+            const filename = `${displayName}_${t.itemId}`
+            return { start: t.start, end: t.end, text: `![[${cacheFolder}/${filename}.${t.ext}]]` }
+          })
+        if (replacements.length > 0) {
+          await this.app.vault.modify(file, applyTextReplacements(content, replacements))
+        }
+      }),
+    )
+  }
+
   private async lazySyncEagleCache(): Promise<void> {
     const cacheFolder = this._cacheManager.cacheFolder
     // Phase 1: Collect unique itemId → ext across all vault files in parallel
-    const seen = new Map<string, string>() // itemId → ext
+    const seen = new Map<string, { ext: string; displayName: string | undefined }>() // itemId → {ext, displayName}
     const fileContents = await Promise.all(
       this.app.vault.getMarkdownFiles().map(async (file) => {
         try {
@@ -435,13 +523,15 @@ export default class EaglePlugin extends Plugin {
     )
     for (const content of fileContents) {
       for (const token of findEagleWikilinkTokens(content, cacheFolder)) {
-        if (!seen.has(token.itemId)) seen.set(token.itemId, token.ext)
+        if (!seen.has(token.itemId)) seen.set(token.itemId, { ext: token.ext, displayName: token.displayName })
       }
     }
 
     // Phase 2: Filter to uncached in parallel — allSettled so one adapter failure doesn't abort the rest
     const entries = Array.from(seen.entries())
-    const cachedResults = await Promise.allSettled(entries.map(([id, ext]) => this._cacheManager.isCached(id, ext)))
+    const cachedResults = await Promise.allSettled(
+      entries.map(([id, { ext, displayName }]) => this._cacheManager.isCached(id, ext, displayName)),
+    )
     const uncached = entries
       .filter((_, i) => {
         const result = cachedResults[i]
@@ -451,16 +541,16 @@ export default class EaglePlugin extends Plugin {
         }
         return !result.value
       })
-      .map(([itemId, ext]) => ({ itemId, ext }))
+      .map(([itemId, { ext, displayName }]) => ({ itemId, ext, displayName }))
     if (uncached.length === 0) return
 
     // Phase 3: Fetch URLs and cache all concurrently
     await Promise.allSettled(
-      uncached.map(async ({ itemId, ext }) => {
+      uncached.map(async ({ itemId, ext, displayName }) => {
         try {
           const fileUrl = await this._eagleUploader.getFileUrlForItemId(itemId)
           if (!fileUrl.startsWith('file://')) return
-          await this._cacheManager.cacheFromOsPath(itemId, ext, fileUrlToOsPath(fileUrl))
+          await this._cacheManager.cacheFromOsPath(itemId, ext, fileUrlToOsPath(fileUrl), displayName)
         } catch (err) {
           if (err instanceof EagleApiError) return // Eagle not running or item missing — expected
           this.log.error('unexpected error during lazy cache sync', err)
@@ -475,8 +565,8 @@ export default class EaglePlugin extends Plugin {
     if (tokens.length === 0) return
 
     const results = await Promise.allSettled(
-      tokens.map(async ({ itemId, ext }) => {
-        const isCached = await this._cacheManager.isCached(itemId, ext)
+      tokens.map(async ({ itemId, ext, displayName }) => {
+        const isCached = await this._cacheManager.isCached(itemId, ext, displayName)
         const exists = await this._eagleUploader.itemExists(itemId)
 
         if (exists === null) return // Eagle unreachable or error — skip to avoid data loss
@@ -484,7 +574,7 @@ export default class EaglePlugin extends Plugin {
         if (exists === false && isCached) {
           // Item confirmed deleted from Eagle — evict from cache
           this.log.info('evicting deleted item from cache', { itemId, file: file.path })
-          await this._cacheManager.removeCache(itemId, ext)
+          await this._cacheManager.removeCache(itemId, ext, displayName)
         } else if (exists === true && !isCached) {
           // Cache file absent but item exists (cache cleared, synced from another device) — backfill
           try {
@@ -493,7 +583,7 @@ export default class EaglePlugin extends Plugin {
               this.log.debug('syncCacheForFile backfill skipped — non-local URL', { itemId })
               return
             }
-            await this._cacheManager.cacheFromOsPath(itemId, ext, fileUrlToOsPath(fileUrl))
+            await this._cacheManager.cacheFromOsPath(itemId, ext, fileUrlToOsPath(fileUrl), displayName)
           } catch (err) {
             if (err instanceof EagleApiError) {
               this.log.debug('syncCacheForFile backfill skipped — Eagle API error', { itemId })
@@ -588,12 +678,13 @@ export default class EaglePlugin extends Plugin {
     try {
       const fileUrl = await this._eagleUploader.resolveFileUrl(item)
       const ext = item.ext || extractFileExtension(fileUrl) || 'jpg'
+      const displayName = item.name || undefined
       if (fileUrl.startsWith('file://')) {
-        await this._cacheManager.cacheFromOsPath(item.id, ext, fileUrlToOsPath(fileUrl)).catch((e) => {
+        await this._cacheManager.cacheFromOsPath(item.id, ext, fileUrlToOsPath(fileUrl), displayName).catch((e) => {
           this.log.warn('cache write failed — image may appear broken', {})
         })
       }
-      const markdownImage = this.markdownImageFor(item.id, ext)
+      const markdownImage = this.markdownImageFor(item.id, ext, displayName)
       editor.replaceRange(markdownImage, editor.getCursor())
     } catch (error) {
       if (error instanceof EagleApiError) {
@@ -640,14 +731,14 @@ export default class EaglePlugin extends Plugin {
           const existingItemId = this._hashStore.lookup(dedupHash, dedupLibraryPath)
           if (existingItemId) {
             this.notices.show('duplicate_detected')
-            const fileUrl = await this._eagleUploader.getFileUrlForItemId(existingItemId, controller.signal)
+            const fileUrl = await this._eagleUploader.getFileUrlForItemId(existingItemId.itemId, controller.signal)
             const ext = fileUrl.startsWith('file://') ? (extractFileExtension(fileUrl) || 'jpg') : 'jpg'
             if (fileUrl.startsWith('file://')) {
-              await this._cacheManager.cacheFromOsPath(existingItemId, ext, fileUrlToOsPath(fileUrl)).catch((e) => {
+              await this._cacheManager.cacheFromOsPath(existingItemId.itemId, ext, fileUrlToOsPath(fileUrl), existingItemId.displayName).catch((e) => {
                 this.log.warn('cache write failed — image may appear broken', {})
               })
             }
-            markdownImage = this.markdownImageFor(existingItemId, ext)
+            markdownImage = this.markdownImageFor(existingItemId.itemId, ext, existingItemId.displayName)
             this.embedMarkDownImage(pasteId, markdownImage)
             modal.close()
             return markdownImage
@@ -658,20 +749,20 @@ export default class EaglePlugin extends Plugin {
       const { itemId, fileUrl, ext } = await this._eagleUploader.upload(normalizedFile, { folderName, signal: controller.signal, displayName })
 
       if (fileUrl.startsWith('file://')) {
-        await this._cacheManager.cacheFromOsPath(itemId, ext, fileUrlToOsPath(fileUrl)).catch((e) => {
+        await this._cacheManager.cacheFromOsPath(itemId, ext, fileUrlToOsPath(fileUrl), displayName).catch((e) => {
           this.log.warn('cache write failed — image may appear broken', {})
         })
       }
 
       // Store hash for future deduplication (reuse pre-computed values)
       if (dedupHash && dedupLibraryPath) {
-        this._hashStore.store(dedupHash, itemId, dedupLibraryPath)
+        this._hashStore.store(dedupHash, itemId, displayName, dedupLibraryPath)
         await this._hashStore.save(this).catch((e) => {
           this.log.warn('failed to store upload hash', {})
         })
       }
 
-      markdownImage = this.markdownImageFor(itemId, ext)
+      markdownImage = this.markdownImageFor(itemId, ext, displayName)
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') {
         modal.close()
@@ -711,8 +802,9 @@ export default class EaglePlugin extends Plugin {
     return `![Uploading to Eagle...${id}]()`
   }
 
-  private markdownImageFor(itemId: string, ext: string) {
-    return `![[${this._cacheManager.cacheFolder}/${itemId}.${ext}]]`
+  private markdownImageFor(itemId: string, ext: string, displayName?: string) {
+    const filename = displayName ? `${displayName}_${itemId}` : itemId
+    return `![[${this._cacheManager.cacheFolder}/${filename}.${ext}]]`
   }
 
   private embedMarkDownImage(pasteId: string, markdownImage: string) {
@@ -746,11 +838,10 @@ export default class EaglePlugin extends Plugin {
         const tokens = findEagleWikilinkTokens(content, oldFolder)
         if (tokens.length === 0) return
 
-        const replacements = tokens.map((t) => ({
-          start: t.start,
-          end: t.end,
-          text: `![[${newFolder}/${t.itemId}.${t.ext}]]`,
-        }))
+        const replacements = tokens.map((t) => {
+          const filename = t.displayName ? `${t.displayName}_${t.itemId}` : t.itemId
+          return { start: t.start, end: t.end, text: `![[${newFolder}/${filename}.${t.ext}]]` }
+        })
         await this.app.vault.modify(file, applyTextReplacements(content, replacements))
         updatedFiles++
         updatedLinks += replacements.length

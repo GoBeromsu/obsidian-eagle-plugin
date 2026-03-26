@@ -27,3 +27,4 @@ test-results.xml
 .hotreload
 data.json
 .claude/
+.omc/state/hud-stdin-cache.json

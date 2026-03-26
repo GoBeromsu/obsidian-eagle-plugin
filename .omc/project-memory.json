@@ -167,6 +167,18 @@
       "type": "file"
     },
     {
+      "path": "src/main.ts",
+      "accessCount": 3,
+      "lastAccessed": 1774537649819,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 3,
+      "lastAccessed": 1774537656107,
+      "type": "directory"
+    },
+    {
       "path": "src/types/obsidian.d.ts",
       "accessCount": 2,
       "lastAccessed": 1774482520810,
@@ -176,12 +188,6 @@
       "path": "src/ui/UpdateLinksConfirmationModal.ts",
       "accessCount": 2,
       "lastAccessed": 1774482521166,
-      "type": "file"
-    },
-    {
-      "path": "src/main.ts",
-      "accessCount": 2,
-      "lastAccessed": 1774482525379,
       "type": "file"
     },
     {
@@ -215,6 +221,18 @@
       "type": "file"
     },
     {
+      "path": "src/ui/EagleHashStore.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774537640226,
+      "type": "file"
+    },
+    {
+      "path": "src/ui/EagleCacheManager.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774537672289,
+      "type": "file"
+    },
+    {
       "path": "src/shared/plugin-logger.ts",
       "accessCount": 1,
       "lastAccessed": 1774482510609,
@@ -224,12 +242,6 @@
       "path": "src/shared/plugin-notices.ts",
       "accessCount": 1,
       "lastAccessed": 1774482510867,
-      "type": "file"
-    },
-    {
-      "path": "src/ui/EagleHashStore.ts",
-      "accessCount": 1,
-      "lastAccessed": 1774482522661,
       "type": "file"
     },
     {
@@ -248,6 +260,30 @@
       "path": "src/ui/obsidian-vault.ts",
       "accessCount": 1,
       "lastAccessed": 1774524233722,
+      "type": "file"
+    },
+    {
+      "path": "src/utils/markdown-image.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774537644209,
+      "type": "file"
+    },
+    {
+      "path": "src/utils/item-naming.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774537644388,
+      "type": "file"
+    },
+    {
+      "path": "test/markdown-image.test.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774537659543,
+      "type": "file"
+    },
+    {
+      "path": "test/eagle-hash-store.test.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774537659910,
       "type": "file"
     }
   ],

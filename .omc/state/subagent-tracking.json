@@ -1,7 +1,29 @@
 {
-  "agents": [],
-  "total_spawned": 0,
+  "agents": [
+    {
+      "agent_id": "a3d68e03f7c6a0d25",
+      "agent_type": "obsidian-developer",
+      "started_at": "2026-03-26T15:07:03.701Z",
+      "parent_mode": "none",
+      "status": "running"
+    },
+    {
+      "agent_id": "a466b9c81e498668f",
+      "agent_type": "obsidian-developer",
+      "started_at": "2026-03-26T15:07:09.278Z",
+      "parent_mode": "none",
+      "status": "running"
+    },
+    {
+      "agent_id": "ab9d9544a894f65f7",
+      "agent_type": "obsidian-developer",
+      "started_at": "2026-03-26T15:07:14.933Z",
+      "parent_mode": "none",
+      "status": "running"
+    }
+  ],
+  "total_spawned": 3,
   "total_completed": 0,
   "total_failed": 0,
-  "last_updated": "2026-03-26T14:26:09.934Z"
+  "last_updated": "2026-03-26T15:07:44.076Z"
 }

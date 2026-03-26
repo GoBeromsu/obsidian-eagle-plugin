@@ -136,7 +136,7 @@ class TextComponent {
   }
 
   setPlaceholder(placeholder: string): this {
-    this.inputEl.attrs.placeholder = placeholder
+    this.inputEl.attrs['placeholder'] = placeholder
     return this
   }
 
@@ -177,7 +177,7 @@ describe('EagleSearchPickerModal', () => {
     const onChoose = vi.fn()
 
     const modal = new EagleSearchPickerModal(
-      new App(),
+      new App() as unknown as import('obsidian').App,
       {
         searchItems,
         resolveSearchThumbnailUrl,

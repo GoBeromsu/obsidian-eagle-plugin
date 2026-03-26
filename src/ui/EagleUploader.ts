@@ -75,7 +75,7 @@ interface EagleListResponse {
   data?: unknown
 }
 
-interface EagleRawItemCandidate extends Partial<EagleItemSearchResult> {
+interface EagleRawItemCandidate {
   id?: string
   name?: string
   ext?: string
@@ -125,7 +125,7 @@ export default class EagleUploader {
       if (resp.status < 200 || resp.status >= 300) {
         const responseMessage = this.extractResponseMessage(resp.json)
           || this.extractTextMessage(resp)
-          || `${resp.status} ${resp.statusText || 'Unknown Error'}`
+          || `${resp.status} Unknown Error`
         throw new EagleApiError(responseMessage)
       }
 
@@ -243,7 +243,7 @@ export default class EagleUploader {
     }
 
     if (folderId) {
-      body.folderId = folderId
+      body['folderId'] = folderId
     }
 
     const data = await this.requestJson<EagleListResponse>(url, 'POST', JSON.stringify(body), signal)
@@ -404,7 +404,7 @@ export default class EagleUploader {
     const url = `http://${eagleHost}:${eaglePort}${EAGLE_API_ENDPOINTS.FOLDER_CREATE}`
 
     const body: Record<string, string> = { folderName: name }
-    if (parentId) body.parent = parentId
+    if (parentId) body['parent'] = parentId
 
     const data = await this.requestJson<EagleListResponse>(
       url,
@@ -612,6 +612,6 @@ export default class EagleUploader {
           thumbnail: this.extractThumbnailCandidate(candidate),
         }
       })
-      .filter((item): item is EagleItemSearchResult => item !== null)
+      .filter((item): item is NonNullable<typeof item> => item !== null)
   }
 }

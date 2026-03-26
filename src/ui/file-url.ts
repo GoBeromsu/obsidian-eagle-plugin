@@ -49,7 +49,7 @@ export function filePathToFileUrl(filePath: string): string {
   if (normalized.startsWith('//')) {
     const withoutLeading = normalized.slice(2).replace(/\/{2,}/g, '/')
     const [host, ...rest] = withoutLeading.split('/')
-    const encodedRest = rest.map((seg) => (seg === '' ? '' : encodePathSegment(seg)))
+    const encodedRest = rest.map((seg: string) => (seg === '' ? '' : encodePathSegment(seg)))
     return `${FILE_URL_PROTOCOL}${host}/${encodedRest.join('/')}`
   }
 
@@ -58,7 +58,7 @@ export function filePathToFileUrl(filePath: string): string {
 
   const pathWithLeadingSlash = withLeadingSlash.startsWith('/') ? withLeadingSlash : `/${withLeadingSlash}`
   const segments = pathWithLeadingSlash.split('/')
-  const encodedSegments = segments.map((seg) => {
+  const encodedSegments = segments.map((seg: string) => {
     if (seg === '') return ''
     if (/^[A-Za-z]:$/.test(seg)) return seg
     return encodePathSegment(seg)

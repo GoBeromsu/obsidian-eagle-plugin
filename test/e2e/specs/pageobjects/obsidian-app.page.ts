@@ -54,7 +54,7 @@ class ObsidianApp {
   }
 
   async closeModal(modalName: string) {
-    console.log(`Closing '${modalName}'`)
+    console.debug(`Closing '${modalName}'`)
     await $('.modal-close-button').click()
   }
 

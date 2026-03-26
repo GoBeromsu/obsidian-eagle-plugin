@@ -1,0 +1,255 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1774453545790,
+  "projectRoot": "/Users/beomsu/Documents/Dev/Obsidian-Plugins/obsidian-eagle-plugin",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "esbuild",
+        "version": "0.25.0",
+        "category": "build"
+      },
+      {
+        "name": "vitest",
+        "version": "0.34.6",
+        "category": "testing"
+      }
+    ],
+    "packageManager": "pnpm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "pnpm build",
+    "testCommand": "pnpm test",
+    "lintCommand": "pnpm lint",
+    "devCommand": "pnpm dev",
+    "scripts": {
+      "dev": "node scripts/dev.mjs",
+      "dev:build": "node scripts/esbuild.build.js",
+      "build": "node scripts/esbuild.build.js production",
+      "ci": "pnpm run build && pnpm run lint && pnpm run test",
+      "test": "vitest run",
+      "test:ui": "vitest --ui",
+      "verify": "pnpm run build && VAULT_NAME=${VAULT_NAME:-Test} obsidian vault=\"$VAULT_NAME\" plugin:reload id=obsidian-eagle-plugin && node scripts/verify-plugin.mjs --vault \"$VAULT_NAME\" \"$@\"",
+      "e2e": "wdio run test/e2e/wdio.conf.ts",
+      "lint": "eslint .",
+      "lint:fix": "eslint . --fix",
+      "version": "node scripts/version.mjs",
+      "postversion": "git push && git push --tags",
+      "release:patch": "node scripts/release.mjs patch",
+      "release:minor": "node scripts/release.mjs minor",
+      "release:major": "node scripts/release.mjs major",
+      "prepare": "husky"
+    }
+  },
+  "conventions": {
+    "namingStyle": "camelCase/PascalCase",
+    "importStyle": null,
+    "testPattern": "*.test.ts",
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "scripts",
+      "src",
+      "test"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "release": {
+      "path": "release",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1774453545773,
+      "keyFiles": [
+        "obsidian-eagle-plugin.zip"
+      ]
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 7,
+      "lastAccessed": 1774453545776,
+      "keyFiles": [
+        "dev.mjs",
+        "esbuild.build.js",
+        "esbuild.config.js",
+        "release-notes.mjs",
+        "release.mjs"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 2,
+      "lastAccessed": 1774453545776,
+      "keyFiles": [
+        "AGENTS.md",
+        "main.ts"
+      ]
+    },
+    "test": {
+      "path": "test",
+      "purpose": "Test files",
+      "fileCount": 11,
+      "lastAccessed": 1774453545777,
+      "keyFiles": [
+        "eagle-hash-store.test.ts",
+        "eagle-search-items-normalization.test.ts",
+        "eagle-search-picker-modal.test.ts",
+        "eagle-uploader-folder.test.ts",
+        "eagle-uploader-upload.test.ts"
+      ]
+    },
+    "src/types": {
+      "path": "src/types",
+      "purpose": "Type definitions",
+      "fileCount": 1,
+      "lastAccessed": 1774453545777,
+      "keyFiles": [
+        "obsidian.d.ts"
+      ]
+    },
+    "src/utils": {
+      "path": "src/utils",
+      "purpose": "Utility functions",
+      "fileCount": 6,
+      "lastAccessed": 1774453545777,
+      "keyFiles": [
+        "FileList.ts",
+        "events.ts",
+        "image-format.ts"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "eslint.config.js",
+      "accessCount": 9,
+      "lastAccessed": 1774535218257,
+      "type": "file"
+    },
+    {
+      "path": "src/ui/misc.ts",
+      "accessCount": 3,
+      "lastAccessed": 1774524233335,
+      "type": "file"
+    },
+    {
+      "path": "tsconfig.json",
+      "accessCount": 3,
+      "lastAccessed": 1774535133670,
+      "type": "file"
+    },
+    {
+      "path": "src/types/obsidian.d.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774482520810,
+      "type": "file"
+    },
+    {
+      "path": "src/ui/UpdateLinksConfirmationModal.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774482521166,
+      "type": "file"
+    },
+    {
+      "path": "src/main.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774482525379,
+      "type": "file"
+    },
+    {
+      "path": "src/ui/Canvas.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774482592743,
+      "type": "file"
+    },
+    {
+      "path": "src/ui/EagleUploader.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774524227382,
+      "type": "file"
+    },
+    {
+      "path": "src/ui/EaglePluginSettingsTab.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774524227774,
+      "type": "file"
+    },
+    {
+      "path": "src/ui/EagleSearchPickerModal.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774524227902,
+      "type": "file"
+    },
+    {
+      "path": "eslint.base.js",
+      "accessCount": 2,
+      "lastAccessed": 1774535110529,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/plugin-logger.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774482510609,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/plugin-notices.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774482510867,
+      "type": "file"
+    },
+    {
+      "path": "src/ui/EagleHashStore.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774482522661,
+      "type": "file"
+    },
+    {
+      "path": "src/ui/InfoModal.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774482524139,
+      "type": "file"
+    },
+    {
+      "path": "src/ui/RenameCacheModal.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774482524857,
+      "type": "file"
+    },
+    {
+      "path": "src/ui/obsidian-vault.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774524233722,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

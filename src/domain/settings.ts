@@ -4,6 +4,7 @@ export interface ObsidianEagleFolderMapping {
 }
 
 export interface EaglePluginSettings {
+  [key: string]: unknown
   eagleHost: string
   eaglePort: number
   eagleFolderName: string

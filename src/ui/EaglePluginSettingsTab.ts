@@ -206,8 +206,8 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
           const basePath = typeof adapter.getBasePath === 'function' ? adapter.getBasePath() : ''
           if (!basePath) return
           const folderPath = `${basePath}/${this.plugin.settings.cacheFolderName}`
-          // eslint-disable-next-line @typescript-eslint/no-require-imports -- electron must be loaded via require() in Obsidian's Node context
-          const { shell } = require('electron') as typeof import('electron')
+          // eslint-disable-next-line @typescript-eslint/no-require-imports -- electron must be loaded via require() in Obsidian's Node context; types not installed
+          const { shell } = require('electron') as { shell: { openPath: (path: string) => Promise<string> } }
           void shell.openPath(folderPath)
         }),
       )

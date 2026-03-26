@@ -10,7 +10,7 @@ export default class RenameCacheModal extends Modal {
     super(app)
   }
 
-  onOpen() {
+  override onOpen() {
     const { contentEl } = this
 
     this.setTitle('Rename cache folder?')
@@ -37,7 +37,7 @@ export default class RenameCacheModal extends Modal {
     })
   }
 
-  onClose() {
+  override onClose() {
     this.contentEl.empty()
   }
 }

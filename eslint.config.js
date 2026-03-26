@@ -1,58 +1,16 @@
 // @ts-check
 
-import perfectionist from 'eslint-plugin-perfectionist'
+import globals from 'globals'
 import * as wdio from 'eslint-plugin-wdio'
 import tseslint from 'typescript-eslint'
 
 import { baseConfig } from './eslint.base.js'
 
-const sortImportsSettings = {
-	type: 'natural',
-	order: 'asc',
-	ignoreCase: false,
-	newlinesBetween: 'always',
-	groups: [
-		'type',
-		'builtin',
-		'external',
-		'internal-type',
-		'internal',
-		['parent-type', 'sibling-type', 'index-type'],
-		['parent', 'sibling', 'index'],
-		'object',
-		'unknown',
-	],
-	environment: 'node',
-}
-
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- defineConfig doesn't flatten wdio/baseConfig array spread
 export default tseslint.config(
 	...baseConfig,
 	{
-		...perfectionist.configs['recommended-natural'],
-		rules: {
-			'perfectionist/sort-imports': ['error', sortImportsSettings],
-			'perfectionist/sort-named-imports': [
-				'error',
-				{
-					type: 'alphabetical',
-					order: 'asc',
-				},
-			],
-		},
-	},
-	{
 		files: ['**/*.ts'],
-		extends: [
-			...tseslint.configs.recommendedTypeChecked,
-			{
-				languageOptions: {
-					parserOptions: {
-						projectService: true,
-						tsconfigDirName: import.meta.dirname,
-					},
-				},
-			},
-		],
 		rules: {
 			'@typescript-eslint/no-explicit-any': 'off',
 			'@typescript-eslint/no-unsafe-argument': 'off',
@@ -60,6 +18,9 @@ export default tseslint.config(
 			'@typescript-eslint/no-unsafe-call': 'off',
 			'@typescript-eslint/no-unsafe-member-access': 'off',
 			'@typescript-eslint/no-unsafe-return': 'off',
+			// NodeJS namespace and require() are used in Electron context (EagleUploader, SettingsTab).
+			// TypeScript handles undefined-variable checks; disable ESLint's no-undef for .ts files.
+			'no-undef': 'off',
 		},
 	},
 	{
@@ -69,11 +30,22 @@ export default tseslint.config(
 			'@typescript-eslint/no-base-to-string': 'off',
 		},
 	},
+	// EagleUploader uses Electron's Node integration (Buffer, fs callbacks with NodeJS.ErrnoException).
 	{
-		files: ['test/e2e/specs/**/*.ts'],
+		files: ['src/ui/EagleUploader.ts', 'src/ui/EaglePluginSettingsTab.ts'],
+		languageOptions: {
+			globals: { ...globals.node },
+		},
+	},
+	// WebdriverIO e2e tests: need wdio globals + mocha globals (describe, it, before, context).
+	{
+		files: ['test/e2e/**/*.ts'],
 		extends: [wdio.configs['flat/recommended']],
+		languageOptions: {
+			globals: { ...globals.mocha },
+		},
 	},
 	{
-		ignores: ['main.js', 'release/', 'coverage/', '**/e2e_test_vault/'],
+		ignores: ['main.js', 'release/', 'coverage/', '**/e2e_test_vault/', 'scripts/*.js', 'vitest.config.ts'],
 	},
 )

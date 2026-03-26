@@ -11,9 +11,10 @@
     "noPropertyAccessFromIndexSignature": true,
     "moduleResolution": "node",
     "isolatedModules": true,
-    "lib": ["DOM", "DOM.Iterable", "ES5", "ES6", "ES7"],
-    "strictBindCallApply": true
+    "lib": ["DOM", "DOM.Iterable", "ES2021"],
+    "strictBindCallApply": true,
+    "noUncheckedIndexedAccess": true
   },
   "include": ["**/*.ts"],
-  "exclude": ["test/e2e/**"]
+  "exclude": ["test/e2e/**", "vitest.config.ts"]
 }

@@ -32,10 +32,10 @@ export const findLocalFileUnderCursor = (editor: Editor, ctx: MarkdownFileInfo) 
   if (clickablePrefix !== '![[' || clickableSuffix !== ']]') return null
 
   const lt = parseLinktext(clickable.text)
-  const linkedFilePath = ctx.app.metadataCache.getFirstLinkpathDest(lt.path, ctx.file.path)
-  if (!linkedFilePath) return null
+  const linkedFile = ctx.app.metadataCache.getFirstLinkpathDest(lt.path, ctx.file.path)
+  if (!linkedFile) return null
 
-  const file = ctx.app.vault.getAbstractFileByPath(linkedFilePath)
+  const file = ctx.app.vault.getAbstractFileByPath(linkedFile.path)
   if (!(file instanceof TFile)) return null
   if (!isKnownImageExtension(file.extension)) return null
 

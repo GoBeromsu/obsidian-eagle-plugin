@@ -41,7 +41,7 @@ export default class EagleSearchPickerModal extends Modal {
     this.setTitle('Search eagle library')
   }
 
-  onOpen(): void {
+  override onOpen(): void {
     this.modalEl.addClass('eagle-picker-modal')
     const { contentEl } = this
     contentEl.empty()
@@ -74,7 +74,7 @@ export default class EagleSearchPickerModal extends Modal {
     this.keywordInput.inputEl.focus()
   }
 
-  onClose(): void {
+  override onClose(): void {
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer)
       this.debounceTimer = null

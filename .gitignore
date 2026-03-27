@@ -28,3 +28,4 @@ test-results.xml
 data.json
 .claude/
 .omc/state/hud-stdin-cache.json
+.omc/

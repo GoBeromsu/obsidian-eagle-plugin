@@ -1,3 +1,4 @@
+/* global require -- Obsidian runs in Electron's Node context; require() is available at runtime */
 import {
   App,
   ButtonComponent,
@@ -206,7 +207,7 @@ export default class EaglePluginSettingsTab extends PluginSettingTab {
           const basePath = typeof adapter.getBasePath === 'function' ? adapter.getBasePath() : ''
           if (!basePath) return
           const folderPath = `${basePath}/${this.plugin.settings.cacheFolderName}`
-          // eslint-disable-next-line @typescript-eslint/no-require-imports, no-undef -- electron must be loaded via require() in Obsidian's Node context; types not installed
+          // eslint-disable-next-line @typescript-eslint/no-require-imports -- electron must be loaded via require() in Obsidian's Node context; types not installed
           const { shell } = require('electron') as { shell: { openPath: (path: string) => Promise<string> } }
           void shell.openPath(folderPath)
         }),

@@ -2,7 +2,7 @@ import { tmpdir } from 'os'
 
 import { App, requestUrl } from 'obsidian'
 
-import type { NodeDataAdapter } from '../types/obsidian'
+import type { NodeDataAdapter, NodeErrnoException } from '../types/obsidian'
 
 import EagleApiError from '../domain/EagleApiError'
 import { EaglePluginSettings } from '../domain/settings'
@@ -203,7 +203,7 @@ export default class EagleUploader {
     } finally {
       const fs = (this.app.vault?.adapter as unknown as NodeDataAdapter)?.fs
       if (fs?.unlink) {
-        fs.unlink(tempFilePath, (err: NodeJS.ErrnoException | null) => {
+        fs.unlink(tempFilePath, (err: NodeErrnoException | null) => {
           if (err && err.code !== 'ENOENT') {
             this.log.warn('failed to delete temp file', { tempFilePath, code: err.code, message: err.message })
           }
@@ -221,7 +221,7 @@ export default class EagleUploader {
     const buffer = Buffer.from(arrayBuffer)
 
     return new Promise((resolve, reject) => {
-      adapter.fs.writeFile(tempFilePath, buffer, (err: NodeJS.ErrnoException | null) => {
+      adapter.fs.writeFile(tempFilePath, buffer, (err: NodeErrnoException | null) => {
         if (err) {
           reject(err instanceof Error ? err : new Error(String(err)))
           return
@@ -501,6 +501,7 @@ export default class EagleUploader {
       await this.getLibraryRootPath()
       return true
     } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string -- String() is intentional fallback for unknown catch value
       this.log.debug('isConnected check failed', { err: String(err) })
       return false
     }
@@ -533,6 +534,7 @@ export default class EagleUploader {
       const data = await this.requestJson<{ status: string; data?: { isDeleted?: boolean } }>(url, 'GET')
       return data.status === 'success' && !data.data?.isDeleted
     } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string -- String() is intentional fallback for unknown catch value
       this.log.debug('itemExists check failed — treating as uncertain', { itemId, err: String(err) })
       return null
     }

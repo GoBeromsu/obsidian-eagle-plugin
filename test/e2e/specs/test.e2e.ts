@@ -1,3 +1,4 @@
+/* global describe, before, context, it, expect */
 import ObsidianApp from './pageobjects/obsidian-app.page'
 import MockingUtils from './utils/mocking'
 

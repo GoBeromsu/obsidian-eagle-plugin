@@ -4,7 +4,7 @@ import process from 'node:process'
 
 import esbuild from 'esbuild'
 
-import { sharedEsbuildConfig } from './esbuild.config.js'
+import { sharedEsbuildConfig } from './esbuild.config.mjs'
 
 const config = sharedEsbuildConfig
 

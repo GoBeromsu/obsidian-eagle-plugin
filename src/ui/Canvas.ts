@@ -16,6 +16,7 @@ export function createEagleCanvasPasteHandler(
 }
 
 async function eagleCanvasPaste(
+  this: { canvas: Canvas },
   plugin: EaglePlugin,
   originalPasteHandler: (e: ClipboardEvent) => Promise<void>,
   e: ClipboardEvent,

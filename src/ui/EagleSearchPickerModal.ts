@@ -172,6 +172,7 @@ export default class EagleSearchPickerModal extends Modal {
         return
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string -- String() is intentional fallback for unknown catch value
       const message = error instanceof Error ? error.message : String(error)
       this.debugLog('search:error', { token, keyword, message })
       if (!(error instanceof EagleApiError)) {
@@ -381,6 +382,7 @@ export default class EagleSearchPickerModal extends Modal {
                 urlType: this.inferThumbnailUrlType('', thumbnailUrl),
               })
             } catch (error) {
+              // eslint-disable-next-line @typescript-eslint/no-base-to-string -- String() is intentional fallback for unknown catch value
               const message = error instanceof Error ? error.message : String(error)
               this.debugLog('thumbnail:fallback:error', { token, itemId: item.id, message })
               if (!(error instanceof EagleApiError)) {

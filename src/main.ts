@@ -501,7 +501,7 @@ export default class EaglePlugin extends Plugin {
             return { start: t.start, end: t.end, text: `![[${cacheFolder}/${filename}.${t.ext}]]` }
           })
         if (replacements.length > 0) {
-          await this.app.vault.modify(file, applyTextReplacements(content, replacements))
+          await this.app.vault.modify(file as import('obsidian').TFile, applyTextReplacements(content, replacements))
         }
       }),
     )

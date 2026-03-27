@@ -1,3 +1,4 @@
+/* global browser, $ */
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 

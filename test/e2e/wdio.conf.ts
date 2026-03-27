@@ -1,4 +1,5 @@
 /// <reference types="wdio-electron-service" />
+/* global WebdriverIO */
 import ObsidianApp from './specs/pageobjects/obsidian-app.page'
 
 const debug = process.env.DEBUG

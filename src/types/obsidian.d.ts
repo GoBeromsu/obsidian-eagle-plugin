@@ -1,10 +1,17 @@
 import 'obsidian'
 
+/* global TextFileView, EditorPosition, Point */
+
+/** Minimal subset of Node.js ErrnoException used by the desktop adapter callbacks. */
+export interface NodeErrnoException extends Error {
+  code?: string
+}
+
 /** Shape of the internal Node.js fs/path fields exposed by Obsidian's desktop adapter. */
 export interface NodeAdapterFs {
-  readFile(path: string, callback: (err: NodeJS.ErrnoException | null, buffer: Buffer) => void): void
-  writeFile(path: string, data: Buffer, callback: (err: NodeJS.ErrnoException | null) => void): void
-  unlink(path: string, callback: (err: NodeJS.ErrnoException | null) => void): void
+  readFile(path: string, callback: (err: NodeErrnoException | null, buffer: Buffer) => void): void
+  writeFile(path: string, data: Buffer, callback: (err: NodeErrnoException | null) => void): void
+  unlink(path: string, callback: (err: NodeErrnoException | null) => void): void
 }
 
 export interface NodeAdapterPath {

@@ -1,3 +1,4 @@
+/* global browser */
 import { App } from 'obsidian'
 
 import { EAGLE_PLUGIN_ID } from '../../constants'

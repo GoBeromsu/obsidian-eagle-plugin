@@ -1,3 +1,4 @@
+/* global $, $$, WebdriverIO */
 import ObsidianApp from './obsidian-app.page'
 
 class ObsidianSettings {

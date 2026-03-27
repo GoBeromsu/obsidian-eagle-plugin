@@ -55,7 +55,8 @@ export default class EagleHashStore {
         }
       }
     } catch (err) {
-      this.log.warn('failed to load hash store', { err: String(err) })
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string -- String() is a safe fallback for unknown catch values when err is not an Error instance
+      this.log.warn('failed to load hash store', { err: err instanceof Error ? err.message : String(err) })
     }
   }
 
@@ -64,7 +65,8 @@ export default class EagleHashStore {
       const existing = ((await plugin.loadData()) as Record<string, unknown>) ?? {}
       await plugin.saveData({ ...existing, [STORE_KEY]: this.data })
     } catch (err) {
-      this.log.warn('failed to save hash store', { err: String(err) })
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string -- String() is a safe fallback for unknown catch values when err is not an Error instance
+      this.log.warn('failed to save hash store', { err: err instanceof Error ? err.message : String(err) })
     }
   }
 

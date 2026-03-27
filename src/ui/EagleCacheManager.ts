@@ -1,6 +1,6 @@
 import { App } from 'obsidian'
 
-import type { NodeDataAdapter } from '../types/obsidian'
+import type { NodeDataAdapter, NodeErrnoException } from '../types/obsidian'
 
 export interface CacheStats {
   fileCount: number
@@ -86,12 +86,12 @@ export default class EagleCacheManager {
     await this.ensureCacheFolder()
     const adapter = this.app.vault.adapter as unknown as NodeDataAdapter
     const data = await new Promise<ArrayBuffer>((resolve, reject) => {
-      adapter.fs.readFile(absolutePath, (err: NodeJS.ErrnoException | null, buffer: Buffer) => {
+      adapter.fs.readFile(absolutePath, (err: NodeErrnoException | null, buffer: Buffer) => {
         if (err) {
           reject(err instanceof Error ? err : new Error(String(err)))
           return
         }
-        resolve(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer)
+        resolve(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength))
       })
     })
     await this.app.vault.adapter.writeBinary(this.cachedVaultPath(itemId, ext, displayName), data)

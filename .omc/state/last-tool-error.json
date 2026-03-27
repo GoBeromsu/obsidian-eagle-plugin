@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"pnpm lint 2>&1\",\"description\":\"Run lint to check current errors\"}",
-  "error": "Exit code 1\n\n> obsidian-eagle-plugin@2.8.8 lint /Users/beomsu/Documents/Dev/Obsidian-Plugins/obsidian-eagle-plugin\n> eslint .\n\n\n/Users/beomsu/Documents/Dev/Obsidian-Plugins/obsidian-eagle-plugin/vitest.config.ts\n  0:0  error  Parsing error: /Users/beomsu/Documents/Dev/Obsidian-Plugins/obsidian-eagle-plugin/vitest.config.ts was included by allowDefaultProject but also was found in the project service. Consider removing it from allowDefaultProject\n\n✖ 1 problem (1 error, 0 warnings)\n\n ELIFECYCLE  C...",
-  "timestamp": "2026-03-26T14:25:27.079Z",
-  "retry_count": 2
-}

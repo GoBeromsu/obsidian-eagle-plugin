@@ -1,9 +1,0 @@
-{
-  "active": true,
-  "started_at": "2026-03-25T16:49:27.023Z",
-  "original_prompt": "/autopilot 여전히 comment 가 새로 달렸는데 에러가 있다. 반본적으로 네가 잡지 못하는 문제들을 식별하고 각 플러그인 단위로 하나씩하나씩 같은 에러들 부터해결해가자",
-  "session_id": "8d714dfa-5c33-475d-9e3f-f80f46e9461e",
-  "project_path": "/Users/beomsu/Documents/Dev/Obsidian-Plugins/obsidian-eagle-plugin",
-  "reinforcement_count": 0,
-  "last_checked_at": "2026-03-25T16:49:27.024Z"
-}

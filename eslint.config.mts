@@ -26,6 +26,12 @@ export default tseslint.config(
 			'depend/ban-dependencies': 'off',
 		},
 	},
+	// Async functions without await are a code smell — remove async or add the missing await.
+	{
+		files: ['src/**/*.ts', 'test/**/*.ts'],
+		plugins: { '@typescript-eslint': tseslint.plugin },
+		rules: { '@typescript-eslint/require-await': 'error' },
+	},
 	// Layer enforcement: domain/, types/, utils/ must not import from obsidian.
 	{
 		files: ['src/domain/**/*.ts', 'src/types/**/*.ts', 'src/utils/**/*.ts'],
@@ -83,6 +89,7 @@ export default tseslint.config(
 			'@typescript-eslint/unbound-method': 'off',
 			'obsidianmd/hardcoded-config-path': 'off',
 			'import/no-nodejs-modules': 'off',
+			'@typescript-eslint/require-await': 'off',
 		},
 	},
 	globalIgnores(['**/main.js', 'dist/', 'node_modules/', 'coverage/']),

@@ -94,10 +94,4 @@ function removeReferenceIfPresent(
   }
 }
 
-async function fixImageTypeIfNeeded(image: File): Promise<File> {
-  const normalized = normalizeImageForBrowser(image)
-  const detected = detectImageFormat(await normalized.arrayBuffer(), normalized.name, normalized.type)
-  return detected.recognized ? ensureTypeAndExtensionMatch(normalized, detected) : normalized
-}
-
-export { fixImageTypeIfNeeded, removeReferenceIfPresent }
+export { removeReferenceIfPresent }

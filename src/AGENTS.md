@@ -19,7 +19,7 @@ Composition and integration point for the four-layer architecture. Routes busine
 - `ui/` — Obsidian-dependent layer: modals, settings tabs, API client, cache managers.
 - `types/` — Pure type definitions: extended Obsidian types, interfaces.
 - `utils/` — Pure functions: markdown parsing, image utilities, random ID generation.
-- `shared/` — Boiler-template synced files: logger, notices, debounce, settings migration.
+- `shared/` — Repo-local helper files: logger, notices, debounce, settings migration.
 
 ## For AI Agents
 

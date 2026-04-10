@@ -168,6 +168,8 @@ pnpm run ci       # Build + lint + test (pre-release check)
 pnpm e2e          # WebdriverIO end-to-end tests
 ```
 
+`scripts/`, `.github/workflows/`, and `src/shared/` are repo-local helpers in this plugin. Keep them aligned with shared harness expectations when relevant, but treat implementation details here as the source of truth.
+
 See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed setup instructions.
 
 ## FAQ

@@ -13,6 +13,12 @@
 - `pnpm run dev` to mount the plugin to an Obsidian vault and enable hot-reload
   where you would like to test it and get instant feedback on any change in your code
 
+### Tooling ownership
+
+- `scripts/`, `.github/workflows/`, and `src/shared/` are maintained in this repository.
+- Keep CI/release evidence aligned with workspace harness expectations when working from the portfolio superproject, but make repo-specific runtime and release changes here.
+- Prefer updating these local helpers directly instead of treating `obsidian-boiler-template` as an implementation source of truth.
+
 ---
 
 Special thanks to:

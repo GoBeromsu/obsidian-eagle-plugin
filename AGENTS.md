@@ -55,7 +55,7 @@ src/
 │   ├── item-naming.ts              # Upload item name template resolution ({uuid}_{noteName})
 │   ├── markdown-image.ts           # Markdown/wikilink image token parsing and replacement
 │   └── pseudo-random.ts            # Pseudo-random ID generation
-└── shared/                         # Boiler-template synced — do not edit manually
+└── shared/                         # Repo-local shared helpers (logger, notices, debounce, settings migration)
     ├── debounce-controller.ts      # Debounce utility
     ├── plugin-logger.ts            # Structured logger (use console.debug/warn/error only)
     ├── plugin-notices.ts           # Obsidian Notice wrappers
@@ -70,7 +70,7 @@ src/
 | `types/` | **No** | No — type declarations only |
 | `domain/` | **No** | Injected only — testable with simple stubs |
 | `ui/` | Yes | Yes — DOM, I/O, Obsidian API |
-| `shared/` | Yes | Yes — synced from boiler-template |
+| `shared/` | Yes | Yes — repo-local helper layer |
 | `main.ts` | Yes | Yes — composition root |
 
 ## Key Config
@@ -97,7 +97,7 @@ src/
 - esbuild always succeeds even with TS errors; use `pnpm tsc --noEmit` to check types
 - Cache sync: never evicts on uncertain failures (`itemExists()` returns `null` on network error)
 - Image format in notes: `![[eagle-cache/ITEMID.EXT]]` (wikilink embed, vault-relative); old format `![eagle:ID](file://...)` kept for backward compat
-- `shared/` files are synced from `obsidian-boiler-template` via `pnpm sync:plugins` — do not edit manually; changes will be overwritten
+- `scripts/`, `.github/workflows/`, and `src/shared/` are maintained in this repo; keep their evidence shape aligned with family harness expectations, but treat implementation details as local authority
 
 ## Subdirectories
 
@@ -108,4 +108,4 @@ src/
 | `src/ui/` | Obsidian-dependent views, modals, settings, API client (see `src/ui/AGENTS.md`) |
 | `src/types/` | Pure type definitions (see `src/types/AGENTS.md`) |
 | `src/utils/` | Pure utility functions (see `src/utils/AGENTS.md`) |
-| `src/shared/` | Boiler-template synced files — DO NOT EDIT (see `src/shared/AGENTS.md`) |
+| `src/shared/` | Repo-local helper files for logging, notices, debouncing, and settings migration (see `src/shared/AGENTS.md`) |

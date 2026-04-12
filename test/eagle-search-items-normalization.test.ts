@@ -73,4 +73,25 @@ describe('EagleUploader search item normalization', () => {
     expect(items).toHaveLength(1)
     expect(items[0]?.id).toBe('item-1')
   })
+
+  it('reads nested item-list payloads from Eagle', async () => {
+    __setRequestUrlMock(() =>
+      Promise.resolve(successResponse({
+        items: [
+          { id: 'item-1', name: 'Nested One', thumbnail: '/api/item/thumbnail?id=item-1' },
+        ],
+      })),
+    )
+
+    const uploader = createUploaderForTest()
+    const items = await uploader.searchItems({ keyword: 'item', limit: 10 })
+
+    expect(items).toEqual([
+      {
+        id: 'item-1',
+        name: 'Nested One',
+        thumbnail: '/api/item/thumbnail?id=item-1',
+      },
+    ])
+  })
 })

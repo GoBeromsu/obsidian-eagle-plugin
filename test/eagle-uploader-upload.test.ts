@@ -237,4 +237,18 @@ describe('EagleUploader — upload error / cancel paths', () => {
     expect(error).toBeInstanceOf(DOMException)
     expect((error as DOMException).name).toBe('AbortError')
   })
+
+  it('falls back to eagle:// URL when item info payload is malformed', async () => {
+    __setRequestUrlMock(({ url }: { url: string }) => {
+      if (url.includes('/api/item/info')) {
+        return Promise.resolve(successResponse({ name: 123, ext: null }))
+      }
+
+      throw new Error(`Unexpected request URL: ${url}`)
+    })
+
+    const uploader = createUploader()
+
+    await expect(uploader.getFileUrlForItemId('item-1')).resolves.toBe('eagle://item/item-1')
+  })
 })

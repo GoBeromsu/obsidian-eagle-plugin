@@ -2,7 +2,7 @@ import { App, Modal, TextComponent } from 'obsidian'
 
 import EagleApiError from '../domain/EagleApiError'
 import { PluginLogger } from '../shared/plugin-logger'
-import EagleUploader, { EagleItemSearchResult } from './EagleUploader'
+import type { EagleItemSearchResult, EagleSearchPickerUploader } from './eagle-uploader-types'
 import { fileUrlToDisplayUrl } from './file-url'
 
 const SEARCH_RESULT_LIMIT = 100
@@ -12,7 +12,7 @@ type PickerStatus = 'idle' | 'loading' | 'error' | 'info'
 
 export default class EagleSearchPickerModal extends Modal {
   private readonly log = new PluginLogger('Eagle')
-  private readonly uploader: EagleUploader
+  private readonly uploader: EagleSearchPickerUploader
   private readonly onChoose: (item: EagleItemSearchResult) => void
   private readonly debugSearchDiagnostics: boolean
   private readonly debounceMs: number
@@ -28,7 +28,7 @@ export default class EagleSearchPickerModal extends Modal {
 
   constructor(
     app: App,
-    uploader: EagleUploader,
+    uploader: EagleSearchPickerUploader,
     onChoose: (item: EagleItemSearchResult) => void,
     debugSearchDiagnostics: boolean,
     debounceMs = 300,

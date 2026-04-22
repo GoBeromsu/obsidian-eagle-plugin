@@ -1,4 +1,4 @@
-import { App, Modal, TextComponent } from 'obsidian'
+import { App, ButtonComponent, Modal, TextComponent } from 'obsidian'
 
 import EagleApiError from '../domain/EagleApiError'
 import { PluginLogger } from '../shared/plugin-logger'
@@ -25,6 +25,7 @@ export default class EagleSearchPickerModal extends Modal {
   private activeSearchToken = 0
   private debounceTimer: ReturnType<typeof setTimeout> | null = null
   private isThumbnailFallbackLoading = false
+  private statusKind: PickerStatus = 'idle'
 
   constructor(
     app: App,
@@ -95,6 +96,7 @@ export default class EagleSearchPickerModal extends Modal {
   }
 
   private setStatus(text: string, status: PickerStatus): void {
+    this.statusKind = status
     this.statusEl.setText(text)
     this.statusEl.removeClass(
       'eagle-picker-status-idle',
@@ -127,8 +129,8 @@ export default class EagleSearchPickerModal extends Modal {
     if (!keyword) {
       this.results = []
       this.thumbFallbackMap.clear()
-      this.renderGrid()
       this.setStatus('Type a keyword to search eagle images.', 'idle')
+      this.renderGrid()
       return
     }
 
@@ -160,13 +162,12 @@ export default class EagleSearchPickerModal extends Modal {
         keyword,
         count: results.length,
       })
-      this.renderGrid(token)
-
       if (results.length === 0) {
         this.setStatus(`No results for "${keyword}".`, 'info')
       } else {
         this.setStatus(`Found ${results.length} result(s). Select one to insert.`, 'info')
       }
+      this.renderGrid(token)
     } catch (error) {
       if (!this.isTokenActive(token)) {
         return
@@ -180,8 +181,8 @@ export default class EagleSearchPickerModal extends Modal {
       }
       this.results = []
       this.thumbFallbackMap.clear()
-      this.renderGrid()
       this.setStatus(`Search failed: ${message}`, 'error')
+      this.renderGrid()
     }
   }
 
@@ -210,10 +211,32 @@ export default class EagleSearchPickerModal extends Modal {
     this.gridEl.empty()
 
     if (this.results.length === 0) {
-      this.gridEl.createEl('p', {
+      const emptyState = this.gridEl.createDiv({ cls: 'eagle-picker-empty-state' })
+      emptyState.createEl('p', {
         text: 'No results.',
         cls: 'eagle-picker-empty',
       })
+      const actions = emptyState.createDiv({ cls: 'modal-button-container' })
+      if (this.statusKind === 'error') {
+        new ButtonComponent(actions)
+          .setButtonText('Retry search')
+          .setCta()
+          .onClick(() => {
+            void this.runSearch()
+          })
+      }
+      if (this.keywordInput.getValue().trim()) {
+        new ButtonComponent(actions)
+          .setButtonText('Clear query')
+          .onClick(() => {
+            this.keywordInput.setValue('')
+            this.results = []
+            this.thumbFallbackMap.clear()
+            this.setStatus('Type a keyword to search eagle images.', 'idle')
+            this.renderGrid()
+            this.keywordInput.inputEl.focus()
+          })
+      }
       return
     }
 

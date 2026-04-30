@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { EagleItemSearchResult } from '../src/ui/EagleUploader'
-import type EagleUploader from '../src/ui/EagleUploader'
+import type { EagleItemSearchResult, EagleSearchPickerUploader } from '../src/ui/eagle-uploader-types'
 
 type ElementListener = (event?: { key?: string; isComposing?: boolean; preventDefault?: () => void }) => void
 
@@ -182,7 +181,7 @@ describe('EagleSearchPickerModal', () => {
         searchItems,
         resolveSearchThumbnailUrl,
         getThumbnailFileUrl,
-      } as unknown as EagleUploader,
+      } as EagleSearchPickerUploader,
       onChoose,
       false,
     )

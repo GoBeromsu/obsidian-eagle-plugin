@@ -7,6 +7,7 @@ import type { NodeDataAdapter, NodeErrnoException } from '../types/obsidian'
 import EagleApiError from '../domain/EagleApiError'
 import { EaglePluginSettings } from '../domain/settings'
 import { PluginLogger } from '../shared/plugin-logger'
+import { safeDisplayName, safeImageExtension } from '../utils/eagle-path-contract'
 import { extractFileExtension } from '../utils/image-format'
 import { generatePseudoRandomId } from '../utils/pseudo-random'
 import {
@@ -358,7 +359,7 @@ export default class EagleUploader {
 
       const fileUrl = await this.getFileUrlForItemId(itemId, signal)
       const extFromUrl = fileUrl.startsWith('file://') ? extractFileExtension(fileUrl) : ''
-      const ext = extFromUrl || extractFileExtension(image.name) || 'jpg'
+      const ext = safeImageExtension(extFromUrl || extractFileExtension(image.name))
       return { itemId, fileUrl, ext }
     } finally {
       const fs = (this.app.vault?.adapter as unknown as NodeDataAdapter)?.fs
@@ -373,7 +374,7 @@ export default class EagleUploader {
   }
 
   private async saveToTempFile(image: File): Promise<string> {
-    const tempFileName = `eagle-temp-${generatePseudoRandomId()}.${image.name.split('.').pop()}`
+    const tempFileName = `eagle-temp-${generatePseudoRandomId()}.${safeImageExtension(extractFileExtension(image.name))}`
     const adapter = this.app.vault.adapter as unknown as NodeDataAdapter
     const osTempDir = tmpdir()
     const tempFilePath = adapter.path.join(osTempDir, tempFileName)
@@ -398,7 +399,7 @@ export default class EagleUploader {
     const nameFromPath = filePath.split('/').pop() || 'image'
     const body: EagleAddFromPathRequest = {
       path: filePath,
-      name: displayName || nameFromPath,
+      name: safeDisplayName(displayName || nameFromPath),
       annotation: 'Added via Obsidian Eagle Plugin',
     }
 

@@ -50,7 +50,7 @@ function createAppMockWithUnlink(unlinkSpy: ReturnType<typeof vi.fn>) {
 type UploaderPrivate = {
   saveToTempFile: (image: File) => Promise<string>
   ensureFolderExists: (name: string, signal?: AbortSignal) => Promise<string>
-  addToEagle: (filePath: string, folderId: string | undefined, signal?: AbortSignal) => Promise<string>
+  addToEagle: (filePath: string, folderId: string | undefined, signal?: AbortSignal, displayName?: string) => Promise<string>
   getFileUrlForItemId: (itemId: string, signal?: AbortSignal) => Promise<string>
   requestJson: <T>(url: string, method: string, body?: string, signal?: AbortSignal) => Promise<T>
 }
@@ -250,5 +250,26 @@ describe('EagleUploader — upload error / cancel paths', () => {
     const uploader = createUploader()
 
     await expect(uploader.getFileUrlForItemId('item-1')).resolves.toBe('eagle://item/item-1')
+  })
+})
+
+describe('EagleUploader — upload path contract', () => {
+  beforeEach(() => {
+    __resetRequestUrlMock()
+  })
+
+  it('sends a sanitized display name and normalized temp-file extension', async () => {
+    let requestBody: Record<string, unknown> | undefined
+    __setRequestUrlMock(({ body }: { body?: string }) => {
+      requestBody = body ? JSON.parse(body) as Record<string, unknown> : undefined
+      return Promise.resolve(successResponse('item-1'))
+    })
+
+    const uploader = createUploader(createAppMockWithUnlink(vi.fn()))
+    const internals = asPrivate(uploader)
+    const result = await internals.addToEagle('/tmp/eagle-temp-abc.jpg', undefined, undefined, '[[bad/name]]|alias')
+
+    expect(result).toBe('item-1')
+    expect(requestBody?.['name']).toBe('bad-name-alias')
   })
 })

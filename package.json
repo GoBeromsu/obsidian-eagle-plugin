@@ -9,10 +9,10 @@
     "dev": "node scripts/dev.mjs",
     "dev:build": "node scripts/esbuild.build.mjs",
     "build": "node scripts/esbuild.build.mjs production",
-    "ci": "pnpm run build && pnpm run lint && pnpm run test",
+    "ci": "pnpm run build && pnpm run typecheck && pnpm run lint && pnpm run test",
     "test": "vitest run",
     "test:ui": "vitest --ui",
-    "verify": "pnpm run build && VAULT_NAME=${VAULT_NAME:-Test} obsidian vault=\"$VAULT_NAME\" plugin:reload id=obsidian-eagle-plugin && node scripts/verify-plugin.mjs --vault \"$VAULT_NAME\" \"$@\"",
+    "verify": "pnpm run build && VAULT_NAME=${VAULT_NAME:-Test} obsidian vault=\"$VAULT_NAME\" plugin:reload id=eagle && node scripts/verify-plugin.mjs --vault \"$VAULT_NAME\" \"$@\"",
     "e2e": "wdio run test/e2e/wdio.conf.ts",
     "lint": "eslint . --ignore-pattern 'release/**'",
     "lint:fix": "eslint . --fix --ignore-pattern 'release/**'",
@@ -21,7 +21,8 @@
     "release:patch": "node scripts/release.mjs patch",
     "release:minor": "node scripts/release.mjs minor",
     "release:major": "node scripts/release.mjs major",
-    "prepare": "husky"
+    "prepare": "husky",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "obsidian",

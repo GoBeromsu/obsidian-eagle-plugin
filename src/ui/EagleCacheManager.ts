@@ -1,6 +1,7 @@
 import { App } from 'obsidian'
 
 import type { NodeDataAdapter, NodeErrnoException } from '../types/obsidian'
+import { cachePathFor, safeCacheFolderPath } from '../utils/eagle-path-contract'
 
 export interface CacheStats {
   fileCount: number
@@ -15,12 +16,11 @@ export default class EagleCacheManager {
 
   constructor(app: App, cacheFolder: string) {
     this.app = app
-    this.cacheFolder = cacheFolder
+    this.cacheFolder = safeCacheFolderPath(cacheFolder)
   }
 
   cachedVaultPath(itemId: string, ext: string, displayName?: string): string {
-    const filename = displayName ? `${displayName}_${itemId}` : itemId
-    return `${this.cacheFolder}/${filename}.${ext}`
+    return cachePathFor(this.cacheFolder, itemId, ext, displayName)
   }
 
   async isCached(itemId: string, ext: string, displayName?: string): Promise<boolean> {

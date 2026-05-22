@@ -29,6 +29,7 @@ import { normalizeImageForUpload, removeReferenceIfPresent } from './ui/misc'
 import { filesAndLinksStatsFrom, getAllCachedReferencesForFile, replaceAllLocalReferencesWithRemoteOne } from './ui/obsidian-vault'
 import UpdateLinksConfirmationModal from './ui/UpdateLinksConfirmationModal'
 import { allFilesAreImages } from './utils/FileList'
+import { safeCacheFolderPath, safePathSegment, wikilinkForCacheItem } from './utils/eagle-path-contract'
 import { extractFileExtension } from './utils/image-format'
 import { resolveItemName } from './utils/item-naming'
 import { applyTextReplacements, findEagleWikilinkTokens, findMarkdownImageTokens, type WikilinkEmbedToken } from './utils/markdown-image'
@@ -233,10 +234,12 @@ export default class EaglePlugin extends Plugin {
     }
 
     this._settings.folderMappings = sanitizeFolderMappings(this._settings.folderMappings ?? [])
+    this._settings.cacheFolderName = safeCacheFolderPath(this._settings.cacheFolderName)
   }
 
   async saveSettings(): Promise<void> {
     this._settings.folderMappings = sanitizeFolderMappings(this._settings.folderMappings ?? [])
+    this._settings.cacheFolderName = safeCacheFolderPath(this._settings.cacheFolderName)
     const existing = ((await this.loadData()) as Record<string, unknown>) ?? {}
     await this.saveData({ ...existing, ...this._settings })
   }
@@ -404,7 +407,7 @@ export default class EaglePlugin extends Plugin {
       for (const { token, itemId } of candidates) {
         const ext = successExt.get(itemId)
         if (!ext) continue
-        replacements.push({ start: token.start, end: token.end, text: `![[${cacheFolderName}/${itemId}.${ext}]]` })
+        replacements.push({ start: token.start, end: token.end, text: wikilinkForCacheItem(cacheFolderName, itemId, ext) })
         migratedCount++
       }
 
@@ -497,8 +500,7 @@ export default class EaglePlugin extends Plugin {
           .filter((t) => renamedIds.has(t.itemId))
           .map((t) => {
             const displayName = nameMap.get(t.itemId) ?? ''
-            const filename = `${displayName}_${t.itemId}`
-            return { start: t.start, end: t.end, text: `![[${cacheFolder}/${filename}.${t.ext}]]` }
+            return { start: t.start, end: t.end, text: wikilinkForCacheItem(cacheFolder, t.itemId, t.ext, displayName) }
           })
         if (replacements.length > 0) {
           await this.app.vault.modify(file as import('obsidian').TFile, applyTextReplacements(content, replacements))
@@ -803,8 +805,7 @@ export default class EaglePlugin extends Plugin {
   }
 
   private markdownImageFor(itemId: string, ext: string, displayName?: string) {
-    const filename = displayName ? `${displayName}_${itemId}` : itemId
-    return `![[${this._cacheManager.cacheFolder}/${filename}.${ext}]]`
+    return wikilinkForCacheItem(this._cacheManager.cacheFolder, itemId, ext, displayName)
   }
 
   private embedMarkDownImage(pasteId: string, markdownImage: string) {
@@ -838,10 +839,11 @@ export default class EaglePlugin extends Plugin {
         const tokens = findEagleWikilinkTokens(content, oldFolder)
         if (tokens.length === 0) return
 
-        const replacements = tokens.map((t) => {
-          const filename = t.displayName ? `${t.displayName}_${t.itemId}` : t.itemId
-          return { start: t.start, end: t.end, text: `![[${newFolder}/${filename}.${t.ext}]]` }
-        })
+        const replacements = tokens.map((t) => ({
+          start: t.start,
+          end: t.end,
+          text: wikilinkForCacheItem(safeCacheFolderPath(newFolder), t.itemId, t.ext, t.displayName),
+        }))
         await this.app.vault.modify(file, applyTextReplacements(content, replacements))
         updatedFiles++
         updatedLinks += replacements.length
@@ -849,7 +851,8 @@ export default class EaglePlugin extends Plugin {
     )
 
     // Step 2: Move cached files from oldFolder to newFolder (OS-level rename, no I/O)
-    this._cacheManager = new EagleCacheManager(this.app, newFolder)
+    const safeNewFolder = safeCacheFolderPath(newFolder)
+    this._cacheManager = new EagleCacheManager(this.app, safeNewFolder)
 
     let movedFiles = 0
     try {
@@ -858,7 +861,7 @@ export default class EaglePlugin extends Plugin {
       await Promise.allSettled(
         listed.files.map(async (srcPath) => {
           const fileName = srcPath.split('/').pop()
-          const destPath = `${newFolder}/${fileName}`
+          const destPath = `${safeNewFolder}/${safePathSegment(fileName ?? 'image')}`
           try {
             await this.app.vault.adapter.rename(srcPath, destPath)
             movedFiles++
@@ -874,7 +877,7 @@ export default class EaglePlugin extends Plugin {
     }
 
     this.notices.show('cache_renamed', {
-      newFolder,
+      newFolder: safeNewFolder,
       linksCount: updatedLinks,
       filesCount: updatedFiles,
       movedFiles,

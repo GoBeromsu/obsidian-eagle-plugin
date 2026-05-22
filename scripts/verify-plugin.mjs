@@ -13,8 +13,8 @@
 
 import { execSync } from 'node:child_process'
 
-const PLUGIN_ID = 'obsidian-eagle-plugin'
-const IMPORT_COMMAND_ID = 'obsidian-eagle-plugin:eagle-import-from-library'
+const PLUGIN_ID = 'eagle'
+const IMPORT_COMMAND_ID = 'eagle:import-from-library'
 const TEST_NOTE = '_eagle-verify-test.md'
 const VERIFY_ITEM_ID = 'VERIFY001'
 const VERIFY_ITEM_NAME = 'eagle-test.png'
@@ -23,6 +23,7 @@ const SEARCH_QUERY = '지혜'
 const SEARCH_RESULT_TIMEOUT_MS = 2000
 const MODAL_RETRY_MS = 100
 const POST_CLICK_WAIT_MS = 900
+const CLOSE_MODAL_WAIT_MS = 100
 
 const cliArgs = process.argv.slice(2)
 const vaultArgIndex = cliArgs.indexOf('--vault')
@@ -55,6 +56,14 @@ function evalSync(code) {
   return resultLine ? resultLine.replace(/^.*=>\s*/, '').trim() : raw
 }
 
+function evalBodySync(code) {
+  return evalSync(`Function(${JSON.stringify(code)})()`)
+}
+
+function evalAsyncBodySync(code) {
+  return evalSync(`Object.getPrototypeOf(async function () {}).constructor(${JSON.stringify(code)})()`)
+}
+
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -82,7 +91,7 @@ function assertContains(label, actual, substr) {
 async function waitForPickerInput() {
   const end = Date.now() + SEARCH_RESULT_TIMEOUT_MS
   while (Date.now() < end) {
-    const exists = evalSync(`
+    const exists = evalBodySync(`
       const el = document.querySelector('.eagle-picker-search')
       return JSON.stringify(Boolean(el && el.isConnected))
     `)
@@ -96,7 +105,7 @@ async function waitForPickerItems() {
   const end = Date.now() + SEARCH_RESULT_TIMEOUT_MS
   while (Date.now() < end) {
     const count = Number(
-      evalSync(`
+      evalBodySync(`
         const count = document.querySelectorAll('.eagle-picker-item').length
         return JSON.stringify(count)
       `),
@@ -107,24 +116,39 @@ async function waitForPickerItems() {
   return 0
 }
 
+function closeExistingPickers() {
+  evalBodySync(`
+    document.querySelectorAll('.eagle-picker-modal .modal-close-button').forEach((button) => {
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    return JSON.stringify(document.querySelectorAll('.eagle-picker-modal').length)
+  `)
+}
+
 function cleanupMocks() {
   try {
-    evalSync(`
+    evalBodySync(`
       const plugin = app.plugins.plugins['${PLUGIN_ID}']
-      if (!plugin?.eagleUploader) return
+      const uploader = plugin?._eagleUploader ?? plugin?.eagleUploader
+      if (!uploader) return
 
       if (plugin.__verifyOrigSearchItems) {
-        plugin.eagleUploader.searchItems = plugin.__verifyOrigSearchItems
+        uploader.searchItems = plugin.__verifyOrigSearchItems
         delete plugin.__verifyOrigSearchItems
       }
 
       if (plugin.__verifyOrigResolveFileUrl) {
-        plugin.eagleUploader.resolveFileUrl = plugin.__verifyOrigResolveFileUrl
+        uploader.resolveFileUrl = plugin.__verifyOrigResolveFileUrl
         delete plugin.__verifyOrigResolveFileUrl
       }
 
+      if (plugin.__verifyOrigResolveSearchThumbnailUrl) {
+        uploader.resolveSearchThumbnailUrl = plugin.__verifyOrigResolveSearchThumbnailUrl
+        delete plugin.__verifyOrigResolveSearchThumbnailUrl
+      }
+
       if (plugin.__verifyOrigGetThumbnailFileUrl) {
-        plugin.eagleUploader.getThumbnailFileUrl = plugin.__verifyOrigGetThumbnailFileUrl
+        uploader.getThumbnailFileUrl = plugin.__verifyOrigGetThumbnailFileUrl
         delete plugin.__verifyOrigGetThumbnailFileUrl
       }
     `)
@@ -136,7 +160,7 @@ function cleanupMocks() {
 // ── Step 1: plugin status and command check ─────────────────────────────
 
 console.log('\n● Plugin status')
-const commandInfo = evalSync(`
+const commandInfo = evalBodySync(`
   const commands = app?.commands?.commands
   const keys = commands && commands.keys
     ? Array.from(commands.keys())
@@ -157,25 +181,26 @@ if (pluginType !== 'object') {
   process.exit(1)
 }
 
+closeExistingPickers()
+await wait(CLOSE_MODAL_WAIT_MS)
+
 // ── Step 2: prepare test note ───────────────────────────────────────────
 
 console.log('\n● Setting up test note')
-const setupResult = evalSync(`
-  (async () => {
-    const file =
-      app.vault.getAbstractFileByPath('${TEST_NOTE}') ?? (await app.vault.create('${TEST_NOTE}', ''))
-    const leaf = app.workspace.getLeaf(false)
-    await leaf.openFile(file, { active: true })
-    const viewState = leaf?.getViewState?.()
-    if (viewState?.state?.mode !== 'source') {
-      await app.commands.executeCommandById('editor:toggle-source')
-    }
-    const editor = app.workspace.activeEditor?.editor
-    if (!editor) return JSON.stringify({ ok: false })
-    editor.setValue('')
-    editor.setCursor({ line: 0, ch: 0 })
-    return JSON.stringify({ ok: true, path: file.path })
-  })()
+const setupResult = evalAsyncBodySync(`
+  const file =
+    app.vault.getAbstractFileByPath('${TEST_NOTE}') ?? (await app.vault.create('${TEST_NOTE}', ''))
+  const leaf = app.workspace.getLeaf(false)
+  await leaf.openFile(file, { active: true })
+  const viewState = leaf?.getViewState?.()
+  if (viewState?.state?.mode !== 'source') {
+    await app.commands.executeCommandById('editor:toggle-source')
+  }
+  const editor = app.workspace.activeEditor?.editor
+  if (!editor) return JSON.stringify({ ok: false })
+  editor.setValue('')
+  editor.setCursor({ line: 0, ch: 0 })
+  return JSON.stringify({ ok: true, path: file.path })
 `)
 const setupPayload = JSON.parse(setupResult)
 assert('test note opened in editor', setupPayload.ok, true)
@@ -184,8 +209,9 @@ assert('test note opened in editor', setupPayload.ok, true)
 
 console.log('\n● Mocked picker flow')
 try {
-  evalSync(`
+  evalBodySync(`
     const plugin = app.plugins.plugins['${PLUGIN_ID}']
+    const uploader = plugin?._eagleUploader ?? plugin?.eagleUploader
     const mockItems = [
       {
         id: '${VERIFY_ITEM_ID}',
@@ -196,22 +222,26 @@ try {
       },
     ]
 
-    plugin.__verifyOrigSearchItems = plugin.eagleUploader.searchItems.bind(plugin.eagleUploader)
-    plugin.__verifyOrigResolveFileUrl = plugin.eagleUploader.resolveFileUrl.bind(plugin.eagleUploader)
-    plugin.__verifyOrigGetThumbnailFileUrl = plugin.eagleUploader.getThumbnailFileUrl.bind(plugin.eagleUploader)
+    plugin.__verifyOrigSearchItems = uploader.searchItems.bind(uploader)
+    plugin.__verifyOrigResolveFileUrl = uploader.resolveFileUrl.bind(uploader)
+    plugin.__verifyOrigResolveSearchThumbnailUrl = uploader.resolveSearchThumbnailUrl.bind(uploader)
+    plugin.__verifyOrigGetThumbnailFileUrl = uploader.getThumbnailFileUrl.bind(uploader)
 
-    plugin.eagleUploader.searchItems = async () => mockItems
-    plugin.eagleUploader.resolveFileUrl = async () => '${VERIFY_FILE_URL}'
-    plugin.eagleUploader.getThumbnailFileUrl = async () => 'file:///mock/eagle-test-thumb.png'
+    uploader.searchItems = async () => mockItems
+    uploader.resolveFileUrl = async () => '${VERIFY_FILE_URL}'
+    uploader.resolveSearchThumbnailUrl = () => 'file:///mock/eagle-test-thumb.png'
+    uploader.getThumbnailFileUrl = async () => 'file:///mock/eagle-test-thumb.png'
   `)
 
-  const commandResult = evalSync(`JSON.stringify(await app.commands.executeCommandById('${IMPORT_COMMAND_ID}'))`)
+  const commandResult = evalAsyncBodySync(`
+    return JSON.stringify(await app.commands.executeCommandById('${IMPORT_COMMAND_ID}'))
+  `)
   assert('search picker command executed', commandResult, 'true')
 
   const pickerReady = await waitForPickerInput()
   assert('picker input appears after command', pickerReady, true)
 
-  const keywordSet = evalSync(`
+  const keywordSet = evalBodySync(`
     const input = document.querySelector('.eagle-picker-search')
     if (!input) return 'missing'
     input.value = '${SEARCH_QUERY}'
@@ -225,14 +255,14 @@ try {
   assert('search result card is rendered', resultCount > 0, true)
 
   const before = JSON.parse(
-    evalSync(`
+    evalBodySync(`
       const value = app.workspace.activeEditor?.editor?.getValue() ?? ''
       return JSON.stringify(value)
     `),
   )
   assert('no auto-insert before card click', before, '')
 
-  const clickResult = evalSync(`
+  const clickResult = evalBodySync(`
     const item = document.querySelector('.eagle-picker-item')
     if (!item) return 'missing'
     item.dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -243,13 +273,13 @@ try {
   await wait(POST_CLICK_WAIT_MS)
 
   const after = JSON.parse(
-    evalSync(`
+    evalBodySync(`
       const value = app.workspace.activeEditor?.editor?.getValue() ?? ''
       return JSON.stringify(value)
     `),
   )
-  assertContains('markdown inserted for selected item', after, `![eagle:${VERIFY_ITEM_ID}]`)
-  assertContains('markdown uses resolved file URL', after, '${VERIFY_FILE_URL}')
+  assertContains('markdown inserted for selected item', after, VERIFY_ITEM_ID)
+  assertContains('markdown uses sanitized cache wikilink', after, '![[eagle-cache/eagle-test.png_VERIFY001.png]]')
 } finally {
   cleanupMocks()
 }
@@ -280,7 +310,8 @@ try {
 // ── Cleanup ───────────────────────────────────────────────────────────────
 
 try {
-  evalSync(`
+  closeExistingPickers()
+  evalAsyncBodySync(`
     const file = app.vault.getAbstractFileByPath('${TEST_NOTE}')
     if (file) await app.vault.delete(file)
   `)
